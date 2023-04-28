@@ -6,6 +6,7 @@ import torch
 from sklearn.model_selection import train_test_split
 import scipy
 import numpy as np
+from scipy.ndimage import binary_dilation, binary_erosion
 
 from kirby.utils import find_files_by_extension, make_directory
 from kirby.data import Data, IrregularTimeSeries, Interval
@@ -210,6 +211,75 @@ def extract_rt_baseline_trials(mat_dict, behavior):
     return trials, behavior, go_cue
 
 
+###################
+# Detect outliers #
+###################
+
+def identify_outliers(data, threshold=1500):
+    hand_acc_norm = np.linalg.norm(data.behavior.hand_acc, axis=1)
+    mask = hand_acc_norm > threshold
+    structure = np.array([1, 1], dtype=bool)
+    # Dilate the binary mask
+    dilated = binary_dilation(mask, structure)
+    return dilated
+
+
+def identify_outliers_box(data, x0, x1, y0, y1):
+    hand_pos = data.behavior.hand_pos.numpy()
+    mask = np.logical_or(hand_pos[:, 0] < x0, hand_pos[:, 0] > x1) 
+    mask = np.logical_or(mask, hand_pos[:, 1] < y0)
+    mask = np.logical_or(mask, hand_pos[:, 1] > y1)
+
+    structure = np.ones(400, dtype=bool)
+    # Dilate the binary mask
+    dilated = binary_dilation(mask, structure)
+
+    structure = np.ones(100, dtype=bool)
+    # Erode the binary mask
+    eroded = binary_erosion(dilated, structure)
+
+    return eroded
+
+
+def detect_outliers(data, filepath):
+    special_1 = [
+        "./raw/Wave2/Chewie_CO_FF_BL_09152016_001_stripped.mat",
+        "./raw/Wave2/Chewie_CO_VR_BL_09122016_001_stripped.mat",
+        "./raw/Wave2/Chewie_CO_VR_BL_09142016_001_stripped.mat",
+        "./raw/Wave2/Chewie_CO_FF_BL_09192016_001_stripped.mat",
+        "./raw/Wave2/Chewie_CO_FF_BL_09212016_001_stripped.mat",
+        "./raw/Wave2/Chewie_CO_VR_BL_09092016_001_stripped.mat",
+        ]
+
+    special_2 = [
+    "./raw/Wave2/Jaco_CO_FF_BL_04062016_001_stripped.mat",
+    "./raw/Wave2/Jaco_CO_FF_BL_04052016_001_stripped.mat",
+]
+
+    if filepath in special_1:
+        x0, x1, y0, y1 = -5, 10, -30, -15  
+    elif filepath in special_2:
+        x0, x1, y0, y1 = -5, 18, -46, -24 
+    else:
+        x0, x1, y0, y1 = -10, 15, -45, -20
+    # remove high accerleration
+    mask_acc = identify_outliers(data, threshold=1500)
+    # remove outliers outside the screen bounds
+    mask_rect = identify_outliers_box(data, x0, x1, y0, y1)
+    mask = np.logical_or(mask_acc, mask_rect)
+    data.behavior.type[mask] = REACHING.OUTLIER
+    return data
+
+def filter_buckets(buckets):
+    out = []
+    for bucket in buckets:
+        # count percentage of outliers
+        outlier_ratio = torch.sum(bucket.behavior.type == REACHING.OUTLIER).item() / len(bucket.behavior)
+        if outlier_ratio < 0.25:
+            out.append(bucket)
+    return out
+
+
 ##############################
 # Validation and test splits # 
 ##############################
@@ -234,7 +304,7 @@ def check_rt_baseline_trial_validity(trial, min_duration=2.0, max_duration=10.0)
 
 
 
-def split_and_get_validation_test(trials, test_size=0.2, valid_size=0.1, random_state=42):
+def split_and_get_train_validation_test(trials, test_size=0.2, valid_size=0.1, random_state=42):
     assert 0 < valid_size < 1, "valid_size must be positive, got {}".format(valid_size)
     assert 0 < test_size < 1, "test_size must be positive, got {}".format(test_size)
 
@@ -245,10 +315,11 @@ def split_and_get_validation_test(trials, test_size=0.2, valid_size=0.1, random_
     train_valid_ids, test_ids = train_test_split(np.arange(num_trials), test_size=test_size, random_state=random_state)
     train_ids, valid_ids = train_test_split(train_valid_ids, test_size=valid_size/(train_size+valid_size), random_state=random_state)
     
+    train_trials = [trials[i] for i in train_ids]
     valid_trials = [trials[i] for i in valid_ids]
     test_trials = [trials[i] for i in test_ids]
 
-    return valid_trials, test_trials
+    return train_trials, valid_trials, test_trials
 
 
 def collect_slices(data, trials, min_duration=WINDOW_SIZE):
@@ -300,14 +371,15 @@ def get_num_input_tokens(data, bucket_size, jitter):
 
 
 if __name__ == "__main__":
-    raw_folder_path = "./raw/ReachingData"
+    raw_folder_path = "./raw"
     processed_folder_path = "./processed"
     make_directory(processed_folder_path, prompt_if_exists=True)
     make_directory(os.path.join(processed_folder_path, 'train'))
+    make_directory(os.path.join(processed_folder_path, 'finetune'))
     make_directory(os.path.join(processed_folder_path, 'valid'))
     make_directory(os.path.join(processed_folder_path, 'test'))
 
-    extension = ".mat"
+    extension = "_stripped.mat"
     session_list = []
     # find all files with extension .nwb in folder_path
     for file_path in find_files_by_extension(raw_folder_path, extension):
@@ -316,16 +388,18 @@ if __name__ == "__main__":
             continue
         logging.info(f"Processing file: {file_path}")
         data = load_file(file_path)
+        data = detect_outliers(data, file_path)
 
         # get successful trials, and keep 20% for test, 10% for validation
         if "CO" in file_path:
             valid_trials = list(filter(check_co_baseline_trial_validity, data.trials))
         elif "RT" in file_path:
             valid_trials = list(filter(check_rt_baseline_trial_validity, data.trials))
-        validation_trials, test_trials = split_and_get_validation_test(valid_trials, test_size=0.2, valid_size=0.1, 
+        train_trials, validation_trials, test_trials = split_and_get_train_validation_test(valid_trials, test_size=0.2, valid_size=0.1, 
                                                                        random_state=42)
 
         # collect data slices for validation and test trials
+        train_slices = collect_slices(data, train_trials)
         validation_slices = collect_slices(data, validation_trials)
         test_slices = collect_slices(data, test_trials)
 
@@ -333,13 +407,16 @@ if __name__ == "__main__":
         train_buckets = list(data.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING))
         # we make sure to exclude validation and test data from the training buckets
         train_buckets = exclude_from_train(train_buckets, validation_trials + test_trials)
+        # remove buckets where there are a lot of outliers
+        train_buckets = filter_buckets(train_buckets)
+
 
         # for each bucket we estimate the expected number of input tokens
-        for bucket in train_buckets:
-            max_num_input_tokens = get_num_input_tokens(train_buckets[1], WINDOW_SIZE, JITTER_PADDING)  # 3233, 3249, 3249, 3265, 3271, 3272, 3273, 3283, 3296, 3353
-            batch_bucket_size = next_power_of_2(max_num_input_tokens)
-            bucket.max_num_input_tokens = max_num_input_tokens
-            bucket.batch_bucket_size = batch_bucket_size
+        # for bucket in train_buckets:
+        #     max_num_input_tokens = get_num_input_tokens(train_buckets[1], WINDOW_SIZE, JITTER_PADDING)  # 3233, 3249, 3249, 3265, 3271, 3272, 3273, 3283, 3296, 3353
+        #     batch_bucket_size = next_power_of_2(max_num_input_tokens)
+        #     bucket.max_num_input_tokens = max_num_input_tokens
+        #     bucket.batch_bucket_size = batch_bucket_size
 
         # all files are saved in their corresponding folders
         for i, sample in enumerate(train_buckets):
@@ -349,6 +426,13 @@ if __name__ == "__main__":
             torch.save(sample, path)
 
         count = len(train_buckets)
+        for i, sample in enumerate(train_slices):
+            zid = str(i + count).zfill(5)
+            filename = os.path.splitext(os.path.basename(file_path))[0] + f'_{zid}.pt'
+            path = os.path.join(processed_folder_path, 'finetune', filename)
+            torch.save(sample, path)
+
+        count += len(train_slices)
         for i, sample in enumerate(validation_slices):
             zid = str(i + count).zfill(5)
             filename = os.path.splitext(os.path.basename(file_path))[0] + f'_{zid}.pt'
