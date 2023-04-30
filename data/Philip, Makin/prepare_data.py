@@ -156,7 +156,6 @@ if __name__ == "__main__":
         # extract spikes
         spikes, units = extract_spikes(h5file)
 
-
         data = Data(spikes=spikes, behavior=behavior, units=units, start=start, end=end,)
 
         # get successful trials, and keep 20% for test, 10% for validation
@@ -170,6 +169,7 @@ if __name__ == "__main__":
         # the remaining data (unstructured) is used for training
         train_buckets = []
         for segment in train_slices:
+            segment.start, segment.end = 0, segment.end - segment.start
             train_buckets.extend(segment.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING))
         # we make sure to exclude validation and test data from the training buckets
         # train_buckets = exclude_from_train(train_buckets, validation_trials + test_trials)

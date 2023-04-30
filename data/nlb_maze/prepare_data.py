@@ -2,11 +2,93 @@
 import os
 import logging
 import torch
+import numpy as np
 
-from src.data import Data, IrregularTimeSeries, Interval
-from src.utils import find_files_by_extension, make_directory
+from kirby.data import Data, IrregularTimeSeries, Interval
+from kirby.utils import find_files_by_extension, make_directory
+from kirby.tasks.reaching import REACHING
 
 logging.basicConfig(level=logging.INFO)
+
+
+WINDOW_SIZE = 1.0
+STEP_SIZE = 0.5
+JITTER_PADDING = 0.25
+
+
+def load_file(file_path):
+    # load mat file
+    data = Data.load_from_nwb(file_path)
+    test_flag = 'test' in file_path
+
+    data.start = data.behavior.timestamps.min()
+    data.end = data.behavior.timestamps.max()
+
+    if test_flag:
+        pass
+
+    data.behavior.hand_vel = data.behavior.hand_vel / 1000
+
+    num_units = data.spikes.unit_id.max() + 1
+    data.units = Data(id=torch.arange(num_units, dtype=torch.long))
+
+    timestamps = data.behavior.timestamps
+    behavior_type = torch.ones_like(timestamps, dtype=torch.long) * REACHING.RANDOM
+    test_mask = torch.zeros_like(timestamps, dtype=torch.bool)
+    trials = data.trials
+
+    for i in range(len(trials)):
+        success = trials.success[i]
+        
+        if success:
+            behavior_type[(timestamps >= trials.target_on_time[i]) & (timestamps < trials.go_cue_time[i])] = REACHING.CENTER_OUT_HOLD
+            behavior_type[(timestamps >= trials.move_onset_time[i]) & (timestamps < trials.end[i])] = REACHING.CENTER_OUT_REACH
+            # behavior_type[(timestamps >= trials.end_time[i]) & (timestamps < trials.end[i])] = REACHING.CENTER_OUT_RETURN
+        else:
+            behavior_type[(timestamps >= trials.target_on_time[i]) & (timestamps < trials.end[i])] = REACHING.INVALID
+        
+        test_mask[(timestamps >= (trials.move_onset_time[i] - 0.05)) & (timestamps < (trials.move_onset_time[i] + 0.65))] = True
+
+    data.behavior.type = behavior_type
+    data.behavior.test_mask = test_mask
+    return data
+
+
+def split_and_get_train_validation(trials):
+    train_ids = np.where(trials.split == 'train')[0]
+    valid_ids = np.where(trials.split == 'val')[0]
+
+    train_trials = [trials[i] for i in train_ids]
+    valid_trials = [trials[i] for i in valid_ids]
+
+    return train_trials, valid_trials
+
+def collect_slices(data, trials, min_duration=WINDOW_SIZE):
+    slices = []
+    for trial in trials:
+        start, end = trial['start'], trial['end']
+        if end - start <= min_duration:
+            start = start - (min_duration - (end - start)) / 2
+            end = start + min_duration
+        slices.append(data.slice(start, end))
+    return slices
+
+
+def exclude_from_train(buckets, exclude_trials):
+    out = []
+    for i in range(len(buckets)):
+        exclude = False
+        for trial in exclude_trials:
+            start, end = trial['start'], trial['end']
+            bucket_start, bucket_end = buckets[i].start, buckets[i].end
+            if start <= bucket_end and end >= bucket_start:
+                exclude = True
+                break
+        if not exclude:
+            out.append(buckets[i])
+    return out
+
+
 
 if __name__ == "__main__":
     raw_folder_path = "./raw"
@@ -15,50 +97,68 @@ if __name__ == "__main__":
     make_directory(os.path.join(processed_folder_path, 'train'))
     make_directory(os.path.join(processed_folder_path, 'valid'))
     make_directory(os.path.join(processed_folder_path, 'test'))
+    make_directory(os.path.join(processed_folder_path, 'finetune'))
+    
     extension = ".nwb"
 
     session_list = []
     # find all files with extension .nwb in folder_path
     for file_path in find_files_by_extension(raw_folder_path, extension):
-        logging.info(f"Processing file: {file_path}")
-        data = Data.load_from_nwb(file_path)
-
         test_flag = 'test' in file_path
 
-        # remove all attributes that are not needed
-        data_lite = Data()
-        # keep spikes and hand_vel
-        data_lite.spikes = data.spikes
-        # keep trial
-        data_lite.trials = Interval(start=data.trials.move_onset_time - 0.15,
-                                    end  =data.trials.move_onset_time + 0.55)
+        if test_flag: 
+            continue
 
+        logging.info(f"Processing file: {file_path}")
+        data = load_file(file_path)
+
+        # collect data slices for validation and test trials
         if not test_flag:
-            data_lite.behavior = IrregularTimeSeries(data.behavior.timestamps, hand_vel=data.behavior.hand_vel)
+            train_trials, validation_trials = split_and_get_train_validation(data.trials)
+            
+            train_slices = collect_slices(data, train_trials)
+            validation_slices = collect_slices(data, validation_trials)
+        
+            # the remaining data (unstructured) is used for training
+            train_buckets = list(data.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING))
+            # we make sure to exclude validation and test data from the training buckets
+            train_buckets = exclude_from_train(train_buckets, validation_trials)
 
-        # split data according to trial_start
-        data_iter = data_lite.slice_along('trials', 'start', 0.7)
+            for i, sample in enumerate(train_buckets):
+                zid = str(i).zfill(5)
+                filename = os.path.splitext(os.path.basename(file_path))[0] + f'_{zid}.pt'
+                path = os.path.join(processed_folder_path, 'train', filename)
+                torch.save(sample, path)
 
-        if not test_flag:
-            # use the default train/val split from NLB
-            train_mask = data.trials.split == "train"
+            count = len(train_buckets)
+            for i, sample in enumerate(train_slices):
+                zid = str(i + count).zfill(5)
+                filename = os.path.splitext(os.path.basename(file_path))[0] + f'_{zid}.pt'
+                path = os.path.join(processed_folder_path, 'finetune', filename)
+                torch.save(sample, path)
+
+            count += len(train_slices)
+            for i, sample in enumerate(validation_slices):
+                zid = str(i + count).zfill(5)
+                filename = os.path.splitext(os.path.basename(file_path))[0] + f'_{zid}.pt'
+                path = os.path.join(processed_folder_path, 'valid', filename)
+                torch.save(sample, path)
+        
+        else:
+            test_slices = collect_slices(data, data.trials)
+
+            for i, sample in enumerate(test_slices):
+                zid = str(i).zfill(5)
+                filename = os.path.splitext(os.path.basename(file_path))[0] + f'_{zid}.pt'
+                path = os.path.join(processed_folder_path, 'test', filename)
+                torch.save(sample, path)
 
         session_id = os.path.splitext(os.path.basename(file_path))[0]
         num_units = data.spikes.unit_id.max() + 1
         session_list.append((session_id, num_units))
-        # iterate over all samples, and save each in a .pt file
-        for i, sample in enumerate(data_iter):
-            zid = str(i).zfill(5)
-            if not test_flag:
-                folder = 'train' if train_mask[i] else 'valid'
-            else:
-                folder = 'test'
-            filename = session_id + f'_{zid}.pt'
-            path = os.path.join(processed_folder_path, folder, filename)
-            torch.save(sample, path)
 
     # save session_list as txt
-    info_path = os.path.join(processed_folder_path, 'info.txt')
+    info_path = os.path.join('.', 'all.txt')
     with open(info_path, 'w') as f:
         for session_id, num_units in session_list:
             f.write(f'{session_id} {num_units}\n')
