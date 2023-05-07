@@ -132,7 +132,7 @@ def extract_co_baseline_trials(mat_dict, behavior):
     nan_mask = np.isnan(target_next_trial)
     target_next_trial[nan_mask] = default_value[nan_mask]
 
-    trials = Interval(start=torch.tensor(values['tgtOnTime'][:, 0]),
+    trials = Interval(start=torch.tensor(values['startTime'][:, 0]),
                         end=torch.tensor(target_next_trial),
                         # other events
                         start_time=torch.tensor(values['startTime'][:, 0]),
