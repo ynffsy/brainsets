@@ -30,22 +30,13 @@ def load_file(file_path):
         data.start = data.behavior.timestamps.min()
         data.end = data.behavior.timestamps.max()
 
-        data.behavior.hand_vel = data.behavior.hand_vel / 1000
+        data.behavior.hand_vel = data.behavior.finger_vel / 200.
         timestamps = data.behavior.timestamps
         behavior_type = torch.ones_like(timestamps, dtype=torch.long) * REACHING.RANDOM
         test_mask = torch.zeros_like(timestamps, dtype=torch.bool)
 
         for i in range(len(trials)):
-            success = trials.success[i]
-            
-            if success:
-                behavior_type[(timestamps >= trials.target_on_time[i]) & (timestamps < trials.go_cue_time[i])] = REACHING.CENTER_OUT_HOLD
-                behavior_type[(timestamps >= trials.move_onset_time[i]) & (timestamps < trials.end[i])] = REACHING.CENTER_OUT_REACH
-                # behavior_type[(timestamps >= trials.end_time[i]) & (timestamps < trials.end[i])] = REACHING.CENTER_OUT_RETURN
-            else:
-                behavior_type[(timestamps >= trials.target_on_time[i]) & (timestamps < trials.end[i])] = REACHING.INVALID
-            
-            test_mask[(timestamps >= (trials.move_onset_time[i] - 0.05)) & (timestamps < (trials.move_onset_time[i] + 0.65))] = True
+            test_mask[(timestamps >= (trials.start[i])) & (timestamps < (trials.end[i]))] = True
 
         data.behavior.type = behavior_type
         data.behavior.test_mask = test_mask
@@ -65,7 +56,7 @@ def split_and_get_train_validation(trials):
 def collect_slices(data, trials, min_duration=WINDOW_SIZE):
     slices = []
     for trial in trials:
-        start, end = trial['start'], trial['end']
+        start, end = trial['start'] - 1.0, trial['end'] + 1.0
         if end - start <= min_duration:
             start = start - (min_duration - (end - start)) / 2
             end = start + min_duration

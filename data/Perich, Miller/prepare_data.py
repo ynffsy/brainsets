@@ -132,7 +132,7 @@ def extract_co_baseline_trials(mat_dict, behavior):
     nan_mask = np.isnan(target_next_trial)
     target_next_trial[nan_mask] = default_value[nan_mask]
 
-    trials = Interval(start=torch.tensor(values['startTime'][:, 0]),
+    trials = Interval(start=torch.tensor(values['tgtOnTime'][:, 0]),
                         end=torch.tensor(target_next_trial),
                         # other events
                         start_time=torch.tensor(values['startTime'][:, 0]),
@@ -289,7 +289,7 @@ def check_co_baseline_trial_validity(trial, min_duration=0.5, max_duration=6.0):
     cond2 = not trial['target_id'].isnan()
 
     # check if the duration of the trial is between min_duration and max_duration
-    cond3 = (trial['end'] - trial['start']) > min_duration and (trial['end'] - trial['start']) < max_duration
+    cond3 = (trial['end'] - trial['target_on_time']) > min_duration and (trial['end'] - trial['target_on_time']) < max_duration
     return all([cond1, cond2, cond3])
 
 
@@ -395,6 +395,8 @@ if __name__ == "__main__":
             valid_trials = list(filter(check_co_baseline_trial_validity, data.trials))
         elif "RT" in file_path:
             valid_trials = list(filter(check_rt_baseline_trial_validity, data.trials))
+
+        logging.info(f"Found {len(valid_trials)} valid trials out of {len(data.trials)} trials")
         train_trials, validation_trials, test_trials = split_and_get_train_validation_test(valid_trials, test_size=0.2, valid_size=0.1, 
                                                                        random_state=42)
 
