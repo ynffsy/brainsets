@@ -105,9 +105,6 @@ if __name__ == "__main__":
     for file_path in find_files_by_extension(raw_folder_path, extension):
         test_flag = 'test' in file_path
 
-        if test_flag: 
-            continue
-
         logging.info(f"Processing file: {file_path}")
         data = load_file(file_path)
 

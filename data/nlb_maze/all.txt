@@ -1,0 +1,8 @@
+sub-Jenkins_ses-medium_desc-test_ecephys 114
+sub-Jenkins_ses-medium_desc-train_behavior+ecephys 152
+sub-Jenkins_ses-full_desc-test_ecephys 137
+sub-Jenkins_ses-full_desc-train_behavior+ecephys 182
+sub-Jenkins_ses-small_desc-test_ecephys 107
+sub-Jenkins_ses-small_desc-train_behavior+ecephys 142
+sub-Jenkins_ses-large_desc-train_behavior+ecephys 162
+sub-Jenkins_ses-large_desc-test_ecephys 122

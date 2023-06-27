@@ -1,0 +1,81 @@
+{
+    "id":"000130",
+    "version":"0.220113.0407",
+    "url":"https://dandiarchive.org/dandiset/000130/0.220113.0407",
+    "name":"DMFC_RSG: macaque dorsomedial frontal cortex spiking activity during time interval reproduction task",
+    "num_subjects":1,
+    "devices":{
+        "electrode_probe_1":"Linear probe with 24 recording channels",
+        "electrode_probe_2":"Linear probe with 24 recording channels",
+        "electrode_probe_3":"Linear probe with 24 recording channels"
+    },
+    "species":[
+        "Macaca mulatta"
+    ],
+    "num_useful_sessions":2,
+    "units":{
+        "session_list":[
+            0,
+            1
+        ],
+        "num_list":[
+            40,
+            54
+        ],
+        "mean":47.0,
+        "std":7.0,
+        "max":54.0,
+        "min":40.0
+    },
+    "num_spikes":{
+        "session_list":[
+            140799,
+            1706196
+        ],
+        "total":1846995
+    },
+    "trials":{
+        "session_list":[
+            0,
+            1
+        ],
+        "num_mean":721.5,
+        "num_std":438.5,
+        "duration_mean":2.424670043103446,
+        "duration_std":0.7246700431034458,
+        "num_list":[
+            283,
+            1160
+        ],
+        "duration_list":[
+            1.7000000000000002,
+            3.149340086206892
+        ]
+    },
+    "sus":{
+        "session_total":279871.64,
+        "trial_total":216518.6629999997,
+        "session_list":[
+            20364.92,
+            259506.72000000003
+        ],
+        "trial_list":[
+            19244.0,
+            197274.6629999997
+        ]
+    },
+    "session_dur_list":[
+        509.123,
+        4805.68
+    ],
+    "total_duration":5314.803,
+    "trial_dur_list":[
+        481.1,
+        3653.2344999999946
+    ],
+    "total_trial_duration":4134.3344999999945,
+    "sessions":[
+        "sub-Haydn/sub-Haydn_desc-test_ecephys.nwb",
+        "sub-Haydn/sub-Haydn_desc-train_ecephys.nwb"
+    ]
+}

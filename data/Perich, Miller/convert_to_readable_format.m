@@ -1,5 +1,5 @@
-directory = './raw/AdaptationData/Chewie_CO_VR_20160929/';
-files = dir([directory '*.mat']);
+directory = './raw/AdaptationData/Mihili_CO_VR_20140306/';
+files = dir([directory '*stripped.mat']);
 
 display(files);
 

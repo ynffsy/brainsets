@@ -4,6 +4,7 @@ import logging
 import torch
 import numpy as np
 import h5py
+from scipy.ndimage import binary_dilation, binary_erosion
 
 from kirby.data import Data, IrregularTimeSeries, Interval
 from kirby.utils import find_files_by_extension, make_directory
@@ -16,6 +17,15 @@ logging.basicConfig(level=logging.INFO)
 WINDOW_SIZE = 1.0
 STEP_SIZE = 0.5
 JITTER_PADDING = 0.25
+
+
+def identify_outliers(data, threshold=6000):
+    hand_acc_norm = np.linalg.norm(data.behavior.cursor_acc, axis=1)
+    mask = hand_acc_norm > threshold
+    structure = np.ones(100, dtype=bool)
+    # Dilate the binary mask
+    dilated = binary_dilation(mask, structure)
+    return dilated
 
 
 def extract_behavior(h5file):
@@ -32,6 +42,7 @@ def extract_behavior(h5file):
 
     # calculate the velocity of the cursor
     cursor_vel = np.gradient(cursor_pos, timestamps, edge_order=1, axis=0)
+    cursor_acc = np.gradient(cursor_vel, timestamps, edge_order=1, axis=0)
     finger_vel = np.gradient(finger_pos, timestamps, edge_order=1, axis=0)
 
     behavior = IrregularTimeSeries(
@@ -39,7 +50,8 @@ def extract_behavior(h5file):
         cursor_pos=torch.tensor(cursor_pos),
         cursor_vel=torch.tensor(cursor_vel),
         hand_vel=torch.tensor(cursor_vel) / 200.,  # todo: this is used to match the other datasets
-        behavior_type=torch.ones(len(timestamps), dtype=torch.int64) * REACHING.RANDOM,
+        cursor_acc=torch.tensor(cursor_acc),
+        type=torch.ones(len(timestamps), dtype=torch.int64) * REACHING.RANDOM,
         target_pos=torch.tensor(target_pos),
         finger_pos=torch.tensor(finger_pos),
         finger_vel=torch.tensor(finger_vel),
@@ -157,6 +169,9 @@ if __name__ == "__main__":
         spikes, units = extract_spikes(h5file)
 
         data = Data(spikes=spikes, behavior=behavior, units=units, start=start, end=end,)
+
+        mask = identify_outliers(data)
+        data.behavior.type[mask] = REACHING.OUTLIER
 
         # get successful trials, and keep 20% for test, 10% for validation
         train_segments, validation_segments, test_segments = split_and_get_train_validation_test(start, end)
