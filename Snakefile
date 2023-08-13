@@ -8,6 +8,9 @@ COMPRESSED_DIR = "/network/projects/neuro-galaxy/data/compressed"
 ######################################################
 
 DATASET = "odoherty_sabes"
+# It's much preferable with shell-based tools to stick to no-space directory names,
+# but I didn't change it quite yet because I wanted to keep the github diff readable.
+FOLDER_NAME = "Philip, Makin"
 
 BROADBAND_DATASETS = [
     "indy_20160622_01", "indy_20160624_03", "indy_20160627_01", "indy_20160630_01", "indy_20160915_01",
@@ -39,7 +42,7 @@ rule compress_data:
 
 rule prepare_data:
     input:
-        py_script = f"data/{DATASET}/prepare_data.py",
+        py_script = f"data/{FOLDER_NAME}/prepare_data.py",
         mat_file = f"{TMP_DIR}/raw/{DATASET}/indy_20160407_02.mat",
         nwb_files = expand(f"{TMP_DIR}/raw/{DATASET}/broadband/{{dataset}}.nwb", dataset=BROADBAND_DATASETS)
     output:
@@ -47,7 +50,7 @@ rule prepare_data:
     shell:
         f"""
         mkdir -p {TMP_DIR}/processed/{DATASET}
-        cd data/{DATASET} && \
+        cd data/{FOLDER_NAME} && \
             python prepare_data.py --input_dir {TMP_DIR}/raw/{DATASET} --output_dir {TMP_DIR}/processed/{DATASET}
         """
 
