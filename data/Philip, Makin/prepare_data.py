@@ -237,6 +237,7 @@ def generate_probe_description() -> list[Probe]:
                 relative_x_um=channel_map[i, 0] if 'suffix' == 'indy_m1' else 0,
                 relative_y_um=channel_map[i, 1] if 'suffix' == 'indy_m1' else 0,
                 relative_z_um=channel_map[i, 2]if 'suffix' == 'indy_m1' else 0,
+                area=area,
             )
             for i in range(96)
         ]
@@ -244,7 +245,6 @@ def generate_probe_description() -> list[Probe]:
         description = Probe(
             id=f"odoherty_sabes_{suffix}",
             type=RecordingTech.UTAH_ARRAY,
-            area=area,
             wideband_sampling_rate=SAMPLE_FREQUENCY,
             waveform_sampling_rate=SAMPLE_FREQUENCY,
             lfp_sampling_rate=500,
@@ -288,6 +288,7 @@ def extract_behavior(h5file):
     cursor_acc = np.gradient(cursor_vel, timestamps, edge_order=1, axis=0)
     finger_vel = np.gradient(finger_pos, timestamps, edge_order=1, axis=0)
 
+    # TODO: Refactor this for reusability.
     # Extract two traces that capture the target and movement onsets.
     # Similar to https://www.biorxiv.org/content/10.1101/2021.11.21.469441v3.full.pdf
     cursor_vel = np.gradient(cursor_pos, timestamps, edge_order=1, axis=0)
@@ -404,7 +405,7 @@ def extract_spikes(h5file: h5py.File, prefix: str):
     unit_ids = []
     unit_types = []
     unit_meta = []
-    unit_waveforms = []
+    waveforms = []
 
     # The 0'th spikesvec corresponds to unsorted thresholded units, the rest are sorted.
     suffixes = ["unsorted"] + [f"sorted_{i:02}" for i in range(1, 11)]
@@ -445,12 +446,12 @@ def extract_spikes(h5file: h5py.File, prefix: str):
                     "waveform_sampling_rate": 24414.0625,
                 }
             )
-            unit_waveforms.append(wf.T)
+            waveforms.append(wf.T)
 
     spikes = np.concatenate(spikes)
+    waveforms = np.concatenate(waveforms)
     unit_ids = np.concatenate(unit_ids)
     unit_types = np.concatenate(unit_types)
-    unit_waveforms = np.concatenate(unit_waveforms)
 
     # Cast to torch tensors
     unit_meta_long = {}
@@ -464,15 +465,15 @@ def extract_spikes(h5file: h5py.File, prefix: str):
 
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
+    waveforms = waveforms[sorted]
     unit_ids = unit_ids[sorted]
     unit_types = unit_types[sorted]
-    unit_waveforms = unit_waveforms[sorted]
 
     spikes = IrregularTimeSeries(
         timestamps=torch.tensor(spikes),
+        waveforms=torch.tensor(waveforms),
         unit_string_id=unit_ids,
         unit_type=torch.tensor(unit_types),
-        waveforms=torch.tensor(unit_waveforms),
     )
 
     units = Data(**unit_meta_long)

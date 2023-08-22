@@ -1,7 +1,9 @@
 from pathlib import Path
 
-TMP_DIR = os.environ["SLURM_TMPDIR"]
-COMPRESSED_DIR = "/network/projects/neuro-galaxy/data/compressed"
+# You can override the default TMP_DIR and COMPRESSED_DIR by passing them as arguments to snakemake.
+# snakemake --config TMP_DIR=/path/to/new/tmp/dir COMPRESSED_DIR=/path/to/new/compressed/dir
+TMP_DIR = config.get("TMP_DIR", os.environ["SLURM_TMPDIR"])
+COMPRESSED_DIR = config.get("COMPRESSED_DIR", "/network/projects/neuro-galaxy/data/compressed")
 
 ######################################################
 # O'Doherty & Sabes (2017) 
