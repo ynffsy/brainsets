@@ -1,3 +1,5 @@
 # Nonhuman Primate Reaching with Multichannel Sensorimotor Cortex Electrophysiology
 
-Paper: https://iopscience.iop.org/article/10.1088/1741-2552/abde8a/pdf
+O'Doherty, Joseph E.; Cardoso, Mariana M. B.;  Makin, Joseph G.;  Sabes, Philip N.
+
+Paper: https://zenodo.org/record/583331
