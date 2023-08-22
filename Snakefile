@@ -31,12 +31,22 @@ rule compress_data:
     input:
         description = f"{TMP_DIR}/processed/{DATASET}/description.yaml"
     output:
-        tarball = f"{COMPRESSED_DIR}/{DATASET}/processed.tar.lz4"
+        train_tar = f"{COMPRESSED_DIR}/{DATASET}/train.tar.lz4",
+        test_tar = f"{COMPRESSED_DIR}/{DATASET}/test.tar.lz4",
+        valid_tar = f"{COMPRESSED_DIR}/{DATASET}/valid.tar.lz4",
+        desc_out = f"{COMPRESSED_DIR}/{DATASET}/description.yaml"
     shell:
         f"""
         mkdir -p {COMPRESSED_DIR}/{DATASET}
-        cd {TMP_DIR}/processed/{DATASET} && \
-            tar -cf - . | lz4 -1 > {COMPRESSED_DIR}/{DATASET}/processed.tar.lz4
+        mkdir -p {TMP_DIR}/compressed
+        for split in train valid test; do
+            # Single lz4 archive.
+            cd {TMP_DIR}/processed/{DATASET}/$split && \
+                tar -cf - . | lz4 -1 > {COMPRESSED_DIR}/{DATASET}/$split.tar.lz4
+            cd - > /dev/null
+            # Multiple shards for webdataset usage.
+            python split_and_tar.py --input_dir "{TMP_DIR}/processed/{DATASET}/$split" --output_dir "{COMPRESSED_DIR}/{DATASET}" --prefix $split
+        done
         cp {{input.description}} {COMPRESSED_DIR}/{DATASET}/description.yaml
         """
 
