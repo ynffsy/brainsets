@@ -55,7 +55,7 @@ rule compress_data:
 rule prepare_data:
     input:
         py_script = f"data/{FOLDER_NAME}/prepare_data.py",
-        mat_file = f"{TMP_DIR}/raw/{DATASET}/indy_20160407_02.mat",
+        mat_files = expand(f"{TMP_DIR}/raw/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS)
         nwb_files = expand(f"{TMP_DIR}/raw/{DATASET}/broadband/{{dataset}}.nwb", dataset=BROADBAND_DATASETS)
     output:
         description = f"{TMP_DIR}/processed/{DATASET}/description.yaml"
@@ -68,7 +68,7 @@ rule prepare_data:
 
 rule download_primary_dataset:
     output:
-        mat_file = f"{TMP_DIR}/raw/{DATASET}/indy_20160407_02.mat"
+        mat_files = expand(f"{TMP_DIR}/raw/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS)
     shell:
         f"""
         mkdir -p {TMP_DIR}/raw/{DATASET}
