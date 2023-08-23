@@ -3,7 +3,9 @@ from pathlib import Path
 # You can override the default TMP_DIR and COMPRESSED_DIR by passing them as arguments to snakemake.
 # snakemake --config TMP_DIR=/path/to/new/tmp/dir COMPRESSED_DIR=/path/to/new/compressed/dir
 TMP_DIR = config.get("TMP_DIR", os.environ["SLURM_TMPDIR"])
-COMPRESSED_DIR = config.get("COMPRESSED_DIR", "/network/projects/neuro-galaxy/data/compressed")
+PERM_DIR = config.get("PERM_DIR", "/network/projects/neuro-galaxy/data")
+RAW_DIR = str(Path(PERM_DIR) / "raw")
+COMPRESSED_DIR = str(Path(PERM_DIR) / "compressed")
 
 ######################################################
 # O'Doherty & Sabes (2017) 
@@ -55,35 +57,35 @@ rule compress_data:
 rule prepare_data:
     input:
         py_script = f"data/{FOLDER_NAME}/prepare_data.py",
-        mat_files = expand(f"{TMP_DIR}/raw/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS)
-        nwb_files = expand(f"{TMP_DIR}/raw/{DATASET}/broadband/{{dataset}}.nwb", dataset=BROADBAND_DATASETS)
+        mat_files = expand(f"{RAW_DIR}/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS),
+        nwb_files = expand(f"{RAW_DIR}/{DATASET}/broadband/{{dataset}}.nwb", dataset=BROADBAND_DATASETS)
     output:
         description = f"{TMP_DIR}/processed/{DATASET}/description.yaml"
     shell:
         f"""
+        cp -r {RAW_DIR}/{DATASET}/ {TMP_DIR}/raw/{DATASET}
         mkdir -p {TMP_DIR}/processed/{DATASET}
-        cd data/{FOLDER_NAME} && \
+        cd "data/{FOLDER_NAME}" && \
             python prepare_data.py --input_dir {TMP_DIR}/raw/{DATASET} --output_dir {TMP_DIR}/processed/{DATASET}
         """
 
 rule download_primary_dataset:
     output:
-        mat_files = expand(f"{TMP_DIR}/raw/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS)
+        mat_files = expand(f"{RAW_DIR}/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS)
     shell:
         f"""
         mkdir -p {TMP_DIR}/raw/{DATASET}
-        zenodo_get 583331 -o {TMP_DIR}/raw/{DATASET}
+        zenodo_get 583331 -o {RAW_DIR}/{DATASET}
         """
 
 rule download_broadband_dataset:
     output:
-        nwb_file = f"{TMP_DIR}/raw/{DATASET}/broadband/{{dataset_name}}.nwb"
+        nwb_file = f"{RAW_DIR}/{DATASET}/broadband/{{dataset_name}}.nwb"
     params:
         zenodo_id = lambda wildcards: ZENODO_IDS[BROADBAND_DATASETS.index(wildcards.dataset_name)],
-        parent_dir = f"{TMP_DIR}/raw/{DATASET}/broadband/"
+        parent_dir = f"{RAW_DIR}/{DATASET}/broadband/"
     shell:
         """
         zenodo_get {params.zenodo_id} -o {params.parent_dir}
-        touch {output.nwb_file}
         """
 
