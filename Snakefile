@@ -63,7 +63,8 @@ rule prepare_data:
         description = f"{TMP_DIR}/processed/{DATASET}/description.yaml"
     shell:
         f"""
-        cp -r {RAW_DIR}/{DATASET}/ {TMP_DIR}/raw/{DATASET}
+        mkdir -p {TMP_DIR}/raw/{DATASET}
+        cp -r {RAW_DIR}/{DATASET} {TMP_DIR}/raw/
         mkdir -p {TMP_DIR}/processed/{DATASET}
         cd "data/{FOLDER_NAME}" && \
             python prepare_data.py --input_dir {TMP_DIR}/raw/{DATASET} --output_dir {TMP_DIR}/processed/{DATASET}
