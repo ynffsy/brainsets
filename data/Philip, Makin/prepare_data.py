@@ -73,6 +73,7 @@ def generate_sortset_description(
         areas=areas,
         recording_tech=recording_tech,
         sessions=[],
+        units=[],
     )
 
 
@@ -396,20 +397,20 @@ def to_ascii(vector):
 def extract_spikes(h5file: h5py.File, prefix: str):
     r"""This dataset has a mixture of sorted and unsorted (threshold crossings) units."""
     spikesvec = load_references_2d(h5file, "spikes")
-    waveforms = load_references_2d(h5file, "wf")
+    waveformsvec = load_references_2d(h5file, "wf")
 
     # This is slightly silly but we can convert channel names back to an ascii token this way.
     chan_names = to_ascii(np.array(load_references_2d(h5file, "chan_names")).squeeze())
 
     spikes = []
-    unit_ids = []
-    unit_types = []
-    unit_meta = []
+    names = []
+    types = []
     waveforms = []
+    unit_meta = []
 
     # The 0'th spikesvec corresponds to unsorted thresholded units, the rest are sorted.
     suffixes = ["unsorted"] + [f"sorted_{i:02}" for i in range(1, 11)]
-    types = [int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS)] + [
+    type_map = [int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS)] + [
         int(RecordingTech.UTAH_ARRAY_SPIKES)
     ] * 10
 
@@ -426,21 +427,21 @@ def extract_spikes(h5file: h5py.File, prefix: str):
             spikes.append(spiketimes)
             area, channel_number = chan_names[i].split(" ")
 
-            unit_string_id = f"{prefix}/{chan_names[i]}/{suffixes[j]}"
-            unit_ids.append([unit_string_id] * len(spiketimes))
-            unit_types.append(np.ones_like(spiketimes, dtype=np.int64) * types[j])
+            unit_name = f"{prefix}/{chan_names[i]}/{suffixes[j]}"
+            names.append([unit_name] * len(spiketimes))
+            types.append(np.ones_like(spiketimes, dtype=np.int64) * type_map[j])
 
-            wf = np.array(waveforms[j][i][:])
+            wf = np.array(waveformsvec[j][i][:])
             unit_meta.append(
                 {
                     "count": len(spiketimes),
                     "channel_name": chan_names[i],
-                    "unit_string_id": unit_string_id,
+                    "unit_name": unit_name,
                     "area_name": area,
                     "channel_number": channel_number,
                     "unit_number": j,
                     "ba": bas[area.lower()],
-                    "type": types[j],
+                    "type": type_map[j],
                     "average_waveform": wf.mean(axis=1),
                     # Based on https://zenodo.org/record/1488441
                     "waveform_sampling_rate": 24414.0625,
@@ -450,8 +451,8 @@ def extract_spikes(h5file: h5py.File, prefix: str):
 
     spikes = np.concatenate(spikes)
     waveforms = np.concatenate(waveforms)
-    unit_ids = np.concatenate(unit_ids)
-    unit_types = np.concatenate(unit_types)
+    names = np.concatenate(names)
+    types = np.concatenate(types)
 
     # Cast to torch tensors
     unit_meta_long = {}
@@ -466,14 +467,14 @@ def extract_spikes(h5file: h5py.File, prefix: str):
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
     waveforms = waveforms[sorted]
-    unit_ids = unit_ids[sorted]
-    unit_types = unit_types[sorted]
+    names = names[sorted]
+    types = types[sorted]
 
     spikes = IrregularTimeSeries(
         timestamps=torch.tensor(spikes),
         waveforms=torch.tensor(waveforms),
-        unit_string_id=unit_ids,
-        unit_type=torch.tensor(unit_types),
+        names=names,
+        types=torch.tensor(types),
     )
 
     units = Data(**unit_meta_long)
@@ -507,6 +508,8 @@ def collect_slices(data, segments):
 
 
 if __name__ == "__main__":
+    experiment_name = "odoherty_sabes_reaching_2017"
+
     # Use argparse to extract two arguments from the command line:
     # input_dir and output_dir
     parser = argparse.ArgumentParser()
@@ -586,6 +589,11 @@ if __name__ == "__main__":
             start=start,
             end=end,
             probes=relevant_probes,
+            # These are all the string metadata that we have. Later, we'll use this for
+            # keying into EmbeddingWithVocab embeddings.
+            session=f"{experiment_name}_{session_id}",
+            sortset=f"{experiment_name}_{sortset_id}",
+            subject=f"{experiment_name}_{animal}",
             **extras,
         )
 
@@ -609,10 +617,18 @@ if __name__ == "__main__":
         for segment in train_slices:
             # Note that we keep the original timestamps to facilitate soft/hard example
             # mining in contrastive learning.
-            # segment.start, segment.end = 0, segment.end - segment.start
-            train_buckets.extend(
-                segment.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING)
-            )
+            old_segment_start = segment.start
+            segment.start, segment.end = 0, segment.end - segment.start
+
+            # When we sliced the data, this subtracted the start from the timestamps. We
+            # need to add it back to get the correct timestamps. This is important for 
+            # soft/hard example mining.
+            buckets = list(segment.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING))
+            for bucket in buckets:
+                bucket.start += old_segment_start
+                bucket.end += old_segment_start
+
+            train_buckets.extend(buckets)
 
         chunks = collections.defaultdict(list)
         footprints = collections.defaultdict(list)
@@ -655,22 +671,25 @@ if __name__ == "__main__":
             )
 
         session = generate_session_description(
-            session_id, end - start, recording_date, broadband
+            f"{experiment_name}_{session_id}", end - start, recording_date, broadband
         )
 
         trial = TrialDescription(
-            id=session_id,
+            id=f"{experiment_name}_{session_id}_01",
             chunks=chunks,
             footprints=footprints,
         )
         session.trials = [trial]
 
+        sortsets[sortset_id].units.append(units.unit_name)
         sortsets[sortset_id].sessions.append(session)
 
         h5file.close()
 
     # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
     sortsets = sorted(list(sortsets.values()), key=lambda x: x.id)
+    for x in sortsets:
+        x.units = sorted(list(set(np.concatenate(x.units).tolist())))
 
     # Create a description file for ease of reference.
     description = DandisetDescription(

@@ -60,7 +60,8 @@ class Species(StringIntEnum):
 class Dictable:
     """A dataclass that can be converted to a dict."""
 
-    def __dict__(self):
+    def to_dict(self):
+        """__dict__ doesn't play well with torch.load"""
         return {k: v for k, v in asdict(self).items()}  # type: ignore
 
 
@@ -97,6 +98,7 @@ class SortsetDescription(Dictable):
     areas: List[StringIntEnum]
     recording_tech: List[RecordingTech]
     sessions: List[SessionDescription]
+    units: List[str]
 
 @dataclass 
 class SubjectDescription(Dictable):
