@@ -82,12 +82,17 @@ def extract_bands(
         # It seems resample overwrites the original data, so we copy it first.
         band = band.resample(target_Fs, npad="auto", n_jobs=4)
 
-        filtered.append(band.get_data())
+        filtered.append(band.get_data().T)
 
     lmp = data.copy().filter(0.1, 20, fir_design="firwin", n_jobs=4)
     lmp = lmp.resample(target_Fs, npad="auto", n_jobs=4)
-    filtered.append(lmp.get_data())
+    filtered.append(lmp.get_data().T)
 
-    ts = ts[:: int(Fs / target_Fs)]
+    ts = ts[int(Fs / target_Fs / 2) :: int(Fs / target_Fs)]
+    stacked = np.stack(filtered, axis=2)
 
-    return np.stack(filtered, axis=2), ts, band_names
+    # There can be off by one errors.
+    if stacked.shape[0] != len(ts):
+        stacked = stacked[: len(ts), :, :]
+
+    return stacked, ts, band_names

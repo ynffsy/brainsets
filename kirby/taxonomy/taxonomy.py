@@ -2,10 +2,12 @@ import dataclasses
 import datetime
 import collections
 from enum import Enum
-from typing import List, Dict
+from typing import List, Dict, Optional
 import numpy as np
 
 from dataclasses import dataclass, asdict
+
+from kirby.tasks.reaching import REACHING
 
 
 class StringIntEnum(Enum):
@@ -23,6 +25,7 @@ class RecordingTech(StringIntEnum):
     UTAH_ARRAY_THRESHOLD_CROSSINGS = 1
     UTAH_ARRAY_WAVEFORMS = 2
     UTAH_ARRAY_LFPS = 3
+    UTAH_ARRAY_AVERAGE_WAVEFORMS = 4
 
     # As a subordinate category
     UTAH_ARRAY = 9
@@ -149,3 +152,26 @@ def to_serializable(dct):
         return dct
     else:
         raise NotImplementedError(f"Cannot serialize {type(dct)}")
+
+class OutputType(StringIntEnum):
+    CONTINUOUS = 0
+    BINARY = 1
+    MULTILABEL = 2
+    MULTINOMIAL = 3
+
+@dataclass
+class DecoderSpec:
+    dim: int
+    type: OutputType
+    timestamp_key: str
+    value_key: str
+    tag_key: Optional[str] = None
+
+
+decoder_registry = {
+    str(Output.CURSOR2D) : DecoderSpec(dim=2, 
+                                       type=OutputType.CONTINUOUS, 
+                                       timestamp_key="behavior.timestamps",
+                                       value_key="behavior.cursor_pos", 
+                                      )
+}

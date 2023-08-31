@@ -13,5 +13,6 @@ from .taxonomy import (
     StringIntEnum,
     Dictable,
     to_serializable,
+    decoder_registry
 )
 from .macaque import Macaque

@@ -5,7 +5,7 @@ import datetime
 import logging
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import h5py
 import msgpack
@@ -62,6 +62,7 @@ def generate_sortset_description(
         RecordingTech.UTAH_ARRAY_SPIKES,
         RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS,
         RecordingTech.UTAH_ARRAY_WAVEFORMS,
+        RecordingTech.UTAH_ARRAY_AVERAGE_WAVEFORMS,
     ]
 
     if broadband:
@@ -92,6 +93,7 @@ def generate_session_description(
         RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
         RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS: "spikes",
         RecordingTech.UTAH_ARRAY_WAVEFORMS: "spikes.waveforms",
+        RecordingTech.UTAH_ARRAY_AVERAGE_WAVEFORMS: "units.average_waveform"
     }
 
     if broadband:
@@ -235,14 +237,14 @@ def generate_probe_description() -> list[Probe]:
             Channel(
                 id=f"{name} {i+1:03}",
                 local_index=i,
-                relative_x_um=channel_map[i, 0] if 'suffix' == 'indy_m1' else 0,
-                relative_y_um=channel_map[i, 1] if 'suffix' == 'indy_m1' else 0,
-                relative_z_um=channel_map[i, 2]if 'suffix' == 'indy_m1' else 0,
+                relative_x_um=channel_map[i, 0] if "suffix" == "indy_m1" else 0,
+                relative_y_um=channel_map[i, 1] if "suffix" == "indy_m1" else 0,
+                relative_z_um=channel_map[i, 2] if "suffix" == "indy_m1" else 0,
                 area=area,
             )
             for i in range(96)
         ]
-        
+
         description = Probe(
             id=f"odoherty_sabes_{suffix}",
             type=RecordingTech.UTAH_ARRAY,
@@ -335,7 +337,9 @@ def extract_behavior(h5file):
     return behavior
 
 
-def extract_lfp(h5file: h5py.File, channels: List[str]):
+def extract_lfp(
+    h5file: h5py.File, channels: List[str]
+) -> Tuple[RegularTimeSeries, Data]:
     """Extract the LFP from the h5 file."""
     logging.info("Broadband data attached. Computing LFP.")
     timestamps = h5file.get("/acquisition/timeseries/broadband/timestamps")[:].squeeze()
@@ -372,18 +376,15 @@ def extract_lfp(h5file: h5py.File, channels: List[str]):
     assert lfp.ndim == 2
     assert t_lfp.ndim == 1
 
-    logging.info("Extracting bands.")
     lfp_bands, t_lfp_bands, names = signal.extract_bands(lfp, t_lfp)
-
-    logging.info("Forming timeseries.")
     lfp = RegularTimeSeries(
         timestamps=torch.tensor(t_lfp_bands),
         lfp=torch.tensor(lfp_bands),
-        channels=channels,
-        bands=names,
     )
 
-    return lfp
+    lfp_metadata = Data(channels=channels, bands=names)
+
+    return lfp, lfp_metadata
 
 
 def load_references_2d(h5file, ref_name):
@@ -546,6 +547,7 @@ if __name__ == "__main__":
         # extract spikes
         logging.info(f"Processing file: {file_path}")
         session_id = Path(file_path).stem  # type: ignore
+
         sortset_id = session_id[:-3]
         assert sortset_id.count("_") == 1, f"Unexpected file name: {sortset_id}"
         animal, recording_date = sortset_id.split("_")
@@ -566,7 +568,9 @@ if __name__ == "__main__":
         if broadband:
             # Load the associated broadband data.
             broadband_file = h5py.File(broadband_path, "r")
-            extras["lfps"] = extract_lfp(broadband_file, chan_names)
+            extras["lfps"], extras["lfp_metadata"] = extract_lfp(
+                broadband_file, chan_names
+            )
 
         # Assemble probe information. It's a bit awkward because we have the info in the
         # case of local field potentials, but not in the case of spikes.
@@ -621,7 +625,7 @@ if __name__ == "__main__":
             segment.start, segment.end = 0, segment.end - segment.start
 
             # When we sliced the data, this subtracted the start from the timestamps. We
-            # need to add it back to get the correct timestamps. This is important for 
+            # need to add it back to get the correct timestamps. This is important for
             # soft/hard example mining.
             buckets = list(segment.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING))
             for bucket in buckets:
