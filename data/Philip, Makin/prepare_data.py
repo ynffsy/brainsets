@@ -443,7 +443,7 @@ def extract_spikes(h5file: h5py.File, prefix: str):
                     "unit_number": j,
                     "ba": bas[area.lower()],
                     "type": type_map[j],
-                    "average_waveform": wf.mean(axis=1),
+                    "average_waveform": wf.mean(axis=1)[:48],
                     # Based on https://zenodo.org/record/1488441
                     "waveform_sampling_rate": 24414.0625,
                 }
