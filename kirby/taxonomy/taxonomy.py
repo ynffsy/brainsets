@@ -43,6 +43,9 @@ class Stimulus(StringIntEnum):
     """Stimuli can variously act like inputs (for conditioning) or like outputs."""
 
     TARGET2D = 0
+    TARGETON = 1
+    GO_CUE = 2
+    TARGETACQ = 3
 
 
 class Output(StringIntEnum):

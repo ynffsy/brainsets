@@ -445,7 +445,7 @@ def extract_spikes(h5file: h5py.File, prefix: str):
                     "type": type_map[j],
                     "average_waveform": wf.mean(axis=1)[:48],
                     # Based on https://zenodo.org/record/1488441
-                    "waveform_sampling_rate": 24414.0625,
+                    "waveform_sampling_rate": SAMPLE_FREQUENCY,
                 }
             )
             waveforms.append(wf.T)
@@ -534,7 +534,7 @@ if __name__ == "__main__":
     sortsets = {}
     trials: list[TrialDescription] = []
 
-    # We don't have any info about age of sex for these subjects.
+    # We don't have any info about age or sex for these subjects.
     subjects = [
         SubjectDescription(id="indy", species=Species.MACACA_MULATTA),
         SubjectDescription(id="loco", species=Species.MACACA_MULATTA),
@@ -544,24 +544,30 @@ if __name__ == "__main__":
 
     # find all files with extension .mat in folder_path
     for file_path in tqdm(sorted(find_files_by_extension(raw_folder_path, extension))):
-        # extract spikes
         logging.info(f"Processing file: {file_path}")
+
+        # determine session_id and sortset_id
         session_id = Path(file_path).stem  # type: ignore
 
         sortset_id = session_id[:-3]
         assert sortset_id.count("_") == 1, f"Unexpected file name: {sortset_id}"
         animal, recording_date = sortset_id.split("_")
 
+        # check if the broadband data file exists.
         broadband_path = Path(raw_folder_path) / "broadband" / f"{session_id}.nwb"
-        # Check if the broadband data file exists.
         broadband = broadband_path.exists()
 
+        # load file
         h5file = h5py.File(file_path, "r")
+
+        # extract spiking activity
+        spikes, units, chan_names = extract_spikes(h5file, sortset_id)
 
         # extract behavior
         behavior = extract_behavior(h5file)
-        start, end = behavior.timestamps[0].item(), behavior.timestamps[-1].item()
-        spikes, units, chan_names = extract_spikes(h5file, sortset_id)
+
+        # extract session start and end times
+        session_start, session_end = behavior.timestamps[0].item(), behavior.timestamps[-1].item()
 
         # Extract LFPs
         extras = dict()
@@ -590,8 +596,8 @@ if __name__ == "__main__":
             spikes=spikes,
             units=units,
             behavior=behavior,
-            start=start,
-            end=end,
+            start=session_start,
+            end=session_end,
             probes=relevant_probes,
             # These are all the string metadata that we have. Later, we'll use this for
             # keying into EmbeddingWithVocab embeddings.
@@ -609,9 +615,9 @@ if __name__ == "__main__":
             train_segments,
             valid_segments,
             test_segments,
-        ) = split_and_get_train_valid_test(start, end)
+        ) = split_and_get_train_valid_test(session_start, session_end)
 
-        # collect data slices for valid and test trials
+        # collect data slices for validation and test segments
         train_slices = collect_slices(data, train_segments)
         valid_slices = collect_slices(data, valid_segments)
         test_slices = collect_slices(data, test_segments)
@@ -675,7 +681,7 @@ if __name__ == "__main__":
             )
 
         session = generate_session_description(
-            f"{experiment_name}_{session_id}", end - start, recording_date, broadband
+            f"{experiment_name}_{session_id}", session_end - session_start, recording_date, broadband
         )
 
         trial = TrialDescription(
