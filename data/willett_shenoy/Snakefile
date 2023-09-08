@@ -1,0 +1,29 @@
+from pathlib import Path
+
+TMP_DIR = config.get("TMP_DIR", os.environ["SLURM_TMPDIR"])
+PERM_DIR = config.get("PERM_DIR", "/network/projects/neuro-galaxy/data")
+RAW_DIR = str(Path(PERM_DIR) / "raw")
+COMPRESSED_DIR = str(Path(PERM_DIR) / "compressed")
+DATASET = "willett_shenoy"
+FOLDER_NAME = "willet_shenoy"
+
+# Download the dataset from datadryad
+url = "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.wh70rxwmv/download"
+
+rule decompress_dataset:
+    shell:
+        f"""
+        mkdir -p {TMP_DIR}/{DATASET}/decompressed
+        tar -xzf {RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz -C {TMP_DIR}/{DATASET}/decompressed
+        """
+
+# Rule that downloads the dataset from the internet using wget
+rule download_dataset:
+    output:
+        f"{RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz"
+    shell:
+        f"""
+        mkdir -p {RAW_DIR}/{DATASET}
+        wget -O {TMP_DIR}/{DATASET}.zip {url}
+        unzip -d {RAW_DIR}/{DATASET} {TMP_DIR}/{DATASET}.zip
+        """

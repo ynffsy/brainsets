@@ -1,13 +1,17 @@
 from typing import List, Tuple
 
-import mne
 import numpy as np
+import torch
+import torchtyping
+import tqdm
 from scipy import signal
+
+from kirby.data import Data, IrregularTimeSeries
+from kirby.taxonomy import RecordingTech
 
 """Signal processing functions. Inspired by Stavisky et al. (2015).
 
 https://dx.doi.org/10.1088/1741-2560/12/3/036009
-
 """
 
 
@@ -20,7 +24,9 @@ def downsample_wideband(
     """
     Downsample wideband signal to LFP sampling rate.
     """
-    assert wideband.shape[0] == timestamps.shape[0], "Time should be first dimension."
+    assert (
+        wideband.shape[0] == timestamps.shape[0]
+    ), "Time should be first dimension."
     # Decimate by a factor of 4
     dec_factor = 4
     if wideband.shape[0] % dec_factor != 0:
@@ -34,7 +40,9 @@ def downsample_wideband(
     nyq = 0.5 * wideband_Fs / dec_factor  # Nyquist frequency
     cutoff = 0.333 * lfp_Fs  # remove everything above 170 Hz.
     normal_cutoff = cutoff / nyq
-    b, a = signal.butter(4, normal_cutoff, btype="low", analog=False, output="ba")
+    b, a = signal.butter(
+        4, normal_cutoff, btype="low", analog=False, output="ba"
+    )
 
     # Interpolation to achieve the desired sampling rate
     t_new = np.arange(timestamps[0], timestamps[-1], 1 / lfp_Fs)
@@ -59,6 +67,8 @@ def extract_bands(
     We use the proposed bands from Stravisky et al. (2015), but we use the MNE toolbox
     rather than straight scipy signal.
     """
+    import mne
+
     target_Fs = 50
     assert (
         Fs % target_Fs == 0
@@ -75,7 +85,9 @@ def extract_bands(
     band_names = ["delta", "theta", "alpha", "beta", "gamma", "lmp"]
     bands = [(1, 4), (3, 10), (12, 23), (27, 38), (50, 300)]
     for band_low, band_hi in bands:
-        band = data.copy().filter(band_low, band_hi, fir_design="firwin", n_jobs=4)
+        band = data.copy().filter(
+            band_low, band_hi, fir_design="firwin", n_jobs=4
+        )
         band = band.apply_function(lambda x: x**2, n_jobs=4)
 
         band = band.filter(18, None, fir_design="firwin", n_jobs=4)
@@ -96,3 +108,55 @@ def extract_bands(
         stacked = stacked[: len(ts), :, :]
 
     return stacked, ts, band_names
+
+
+def cube_to_long(
+    ts: np.ndarray, cube: np.ndarray, channel_prefix="chan"
+) -> Tuple[List[IrregularTimeSeries], Data]:
+    """Convert a cube of threshold crossings to a list of trials and units."""
+    assert cube.shape[1] == len(ts)
+    assert cube.ndim == 3
+    channels = np.arange(cube.shape[2])
+    channels = np.tile(channels, [cube.shape[1], 1])
+
+    # First dim is batch, second is time, third is channel.
+    assert np.issubdtype(cube.dtype, np.integer)
+    assert cube.min() >= 0
+
+    ts = np.tile(ts.reshape((-1, 1)), [1, cube.shape[2]])
+    assert ts.shape == channels.shape
+
+    # The first dimension we map to a single trial.
+    trials = []
+    for b in tqdm.tqdm(range(cube.shape[0])):
+        cube_ = cube[b, :, :]
+        ts_ = []
+        channels_ = []
+        for i in range(1, cube_.max() + 1):
+            ts_.append(ts[cube_ >= i])
+            channels_.append(channels[cube_ >= i])
+
+        ts_ = np.concatenate(ts_)
+        channels_ = np.concatenate(channels_)
+        channel_names = [f"{channel_prefix}{c}" for c in channels_]
+
+        trials.append(
+            IrregularTimeSeries(
+                timestamps=torch.tensor(ts_),
+                names=channel_names,
+                types=torch.ones(len(ts_))
+                * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
+            )
+        )
+
+    counts = cube.sum(axis=0).sum(axis=0)
+    units = Data(
+        count=torch.Tensor(counts.astype(int)),
+        channel_name=[f"{channel_prefix}{c:03}" for c in range(cube.shape[2])],
+        unit_number=torch.zeros(cube.shape[2]),
+        channel_number=torch.arange(cube.shape[2]),
+        type=torch.ones(cube.shape[2])
+        * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
+    )
+
+    return trials, units

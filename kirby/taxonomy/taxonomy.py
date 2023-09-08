@@ -1,11 +1,12 @@
+import collections
 import dataclasses
 import datetime
-import collections
+from dataclasses import asdict
 from enum import Enum
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 import numpy as np
 
-from dataclasses import dataclass, asdict
+from pydantic.dataclasses import dataclass
 
 from kirby.tasks.reaching import REACHING
 
@@ -38,6 +39,13 @@ class Task(StringIntEnum):
     # A continuous version of the classic BCI without discrete trials.
     CONTINUOUS_REACHING = 1
 
+    # A Shenoy-style task involving handwriting different characters.
+    DISCRETE_WRITING_CHARACTER = 2
+
+    DISCRETE_WRITING_LINE = 3
+
+    CONTINUOUS_WRITING = 4
+
 
 class Stimulus(StringIntEnum):
     """Stimuli can variously act like inputs (for conditioning) or like outputs."""
@@ -55,12 +63,17 @@ class Output(StringIntEnum):
     EYE2D = 2
     FINGER3D = 3
 
+    # Shenoy handwriting style outputs.
+    WRITING_CHARACTER = 4
+    WRITING_LINE = 5
+
     DISCRETE_TRIAL_ONSET_OFFSET = 10
     CONTINUOUS_TRIAL_ONSET_OFFSET = 11
 
 
 class Species(StringIntEnum):
     MACACA_MULATTA = 0
+    HOMO_SAPIENS = 1
 
 
 class Dictable:
@@ -106,11 +119,13 @@ class SortsetDescription(Dictable):
     sessions: List[SessionDescription]
     units: List[str]
 
-@dataclass 
+
+@dataclass
 class SubjectDescription(Dictable):
     id: str
     species: Species
     age: float = 0.0
+
 
 @dataclass
 class DandisetDescription(Dictable):
@@ -131,7 +146,10 @@ def to_serializable(dct):
     if isinstance(dct, list):
         return [to_serializable(x) for x in dct]
     elif isinstance(dct, dict) or isinstance(dct, collections.defaultdict):
-        return {to_serializable(x): to_serializable(y) for x, y in dict(dct).items()}
+        return {
+            to_serializable(x): to_serializable(y)
+            for x, y in dict(dct).items()
+        }
     elif isinstance(dct, Dictable):
         return {
             x.name: to_serializable(getattr(dct, x.name))
