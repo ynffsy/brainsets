@@ -23,6 +23,10 @@ ZENODO_IDS = [
     1302832, 1301045, 1167965, 1163026, 1161225, 854733
 ]
 
+rule all:
+    input:
+        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+
 rule download_primary_dataset:
     output:
         mat_files = expand(f"{RAW_DIR}/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS)
