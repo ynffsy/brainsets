@@ -1,0 +1,38 @@
+from pathlib import Path
+
+DATASET = "willett_shenoy"
+
+RAW_DIR = config["RAW_DIR"]
+PROCESSED_DIR = config["PROCESSED_DIR"]
+COMPRESSED_DIR = config["COMPRESSED_DIR"]
+
+# Download the dataset from datadryad
+url = "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.wh70rxwmv/download"
+
+rule all:
+    input:
+        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+
+# Rule that downloads the dataset from the internet using wget
+rule download_dataset:
+    output:
+        f"{RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz"
+    shell:
+        f"""
+        mkdir -p {RAW_DIR}/{DATASET}
+        wget -O {RAW_DIR}/{DATASET}/{DATASET}.zip {url}
+        unzip -d {RAW_DIR}/{DATASET} {RAW_DIR}/{DATASET}/{DATASET}.zip
+        tar -xzf {RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz -C {RAW_DIR}/{DATASET}
+        """
+
+rule prepare_data:
+    input:
+        f"{RAW_DIR}/{DATASET}/handwritingBCIData/readme.pdf",
+        py_script = f"data/scripts/{DATASET}/prepare_data.py",
+    output:
+        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+    shell:
+        f"""
+        mkdir -p {COMPRESSED_DIR}/{DATASET}
+        python3 {{input.py_script}} --input_dir {RAW_DIR}/{DATASET}/handwritingBCIData --output_dir {PROCESSED_DIR}/{DATASET}
+        """

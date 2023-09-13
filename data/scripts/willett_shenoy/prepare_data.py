@@ -29,7 +29,7 @@ from kirby.taxonomy.taxonomy import (
     TrialDescription,
 )
 
-experiment_name = "willet_shenoy"
+experiment_name = "willett_shenoy"
 subject_name = f"{experiment_name}_t5"
 
 
@@ -88,15 +88,16 @@ def process_single_letters(
             continue
 
         letter = key[len("neuralActivityCube_") :]
+        resolved = False
         found = False
         try:
-            writing.Character[letter]
+            resolved = writing.Character[letter]
             found = True
         except:
             pass
 
         try:
-            writing.Line[letter]
+            resolved = writing.Line[letter]
             found = True
         except:
             pass
@@ -108,7 +109,7 @@ def process_single_letters(
             continue
 
         spike_cubes.append(data)
-        labels += [letter] * len(spike_cubes)
+        labels += [int(resolved)] * len(spike_cubes)
         valid_mask = np.arange(len(spike_cubes)) % 9 == 2
         test_mask = np.arange(len(spike_cubes)) % 9 == 5
         train_mask = ~valid_mask & ~test_mask
@@ -144,7 +145,9 @@ def process_single_letters(
 
     for trial, label, fold in zip(trials, labels, folds):
         behavior = IrregularTimeSeries(
-            timestamps=torch.Tensor([0]), letters=np.array([label])
+            timestamps=torch.Tensor([0]), 
+            letters=torch.tensor([[int(label)]]),
+            behavior_type=torch.tensor([0])
         )
         data = Data(
             spikes=trial,
@@ -173,7 +176,7 @@ def process_single_letters(
 
         trial_descriptions.append(
             TrialDescription(
-                id=basename, footprints={}, chunks={fold: [chunk_description]}
+                id=basename, footprints={}, chunks={fold.item(): [chunk_description]}
             )
         )
 
@@ -201,7 +204,7 @@ def process_single_letters(
         trials=trial_descriptions,
     )
 
-    return sortset_name, units.channel_name, session
+    return sortset_name, units.unit_name, session
 
 
 # Load the straightLines.mat file
