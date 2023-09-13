@@ -21,3 +21,8 @@ module perich_miller:
     snakefile: "data/scripts/perich_miller/Snakefile"
     config: config
 use rule * from perich_miller as perich_miller_*
+
+module willett_shenoy:
+    snakefile: "data/scripts/willett_shenoy/Snakefile"
+    config: config
+use rule * from willett_shenoy as willett_shenoy_*
