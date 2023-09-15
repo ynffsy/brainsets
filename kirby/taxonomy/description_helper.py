@@ -2,6 +2,7 @@ import collections
 import datetime
 from pathlib import Path
 from typing import Any, Dict, List
+import warnings
 
 import msgpack
 import yaml
@@ -100,7 +101,7 @@ class DescriptionHelper:
         with open(filename, "r") as f:
             for i, line in enumerate(f.readlines()):
                 if "!!" in line:
-                    raise ValueError(
+                    warnings.warn(
                         f"Found !! in description: at line {i+1}\n\t {line}"
                     )
 

@@ -2,24 +2,16 @@ import collections
 import dataclasses
 import datetime
 from dataclasses import asdict
-from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union, Any
 import numpy as np
 
 from pydantic.dataclasses import dataclass
+import torch
 
-from kirby.tasks.reaching import REACHING
+from kirby.taxonomy.macaque import Macaque
 
-
-class StringIntEnum(Enum):
-    """Enum where the value is a string, but can be cast to an int."""
-
-    def __str__(self):
-        return self.name
-
-    def __int__(self):
-        return self.value
-
+from .core import StringIntEnum
+from .writing import Character, Line
 
 class RecordingTech(StringIntEnum):
     UTAH_ARRAY_SPIKES = 0
@@ -58,7 +50,7 @@ class Stimulus(StringIntEnum):
 
 class Output(StringIntEnum):
     # Classic BCI outputs.
-    ARM2D = 0
+    ARMVELOCITY2D = 0
     CURSOR2D = 1
     EYE2D = 2
     FINGER3D = 3
@@ -69,6 +61,8 @@ class Output(StringIntEnum):
 
     DISCRETE_TRIAL_ONSET_OFFSET = 10
     CONTINUOUS_TRIAL_ONSET_OFFSET = 11
+
+    CURSORVELOCITY2D = 12
 
 
 class Species(StringIntEnum):
@@ -114,7 +108,7 @@ class SessionDescription(Dictable):
 class SortsetDescription(Dictable):
     id: str
     subject: str
-    areas: List[StringIntEnum]
+    areas: Union[List[StringIntEnum], List[Macaque]]
     recording_tech: List[RecordingTech]
     sessions: List[SessionDescription]
     units: List[str]
@@ -183,16 +177,54 @@ class OutputType(StringIntEnum):
 @dataclass
 class DecoderSpec:
     dim: int
+    target_dim: int  # For multilabel and multinomial, target_dim can be 1 when the output is an int.
+    # For soft classes instead, target_dim = dim.
     type: OutputType
     timestamp_key: str
     value_key: str
+    loss_fn: str
     tag_key: Optional[str] = None
+    target_dtype: str = "float32"  # torch.dtype is not serializable.
+    behavior_type_key = "behavior.type"
 
 
 decoder_registry = {
+    str(Output.ARMVELOCITY2D) : DecoderSpec(dim=2, 
+                                            target_dim=2,
+                                       type=OutputType.CONTINUOUS, 
+                                       timestamp_key="behavior.timestamps",
+                                       value_key="behavior.hand_vel", 
+                                       loss_fn="mse",
+                                      ),
+    str(Output.CURSORVELOCITY2D) : DecoderSpec(dim=2, 
+                                               target_dim=2,
+                                       type=OutputType.CONTINUOUS, 
+                                       timestamp_key="behavior.timestamps",
+                                       value_key="behavior.cursor_vel", 
+                                       loss_fn="mse",
+                                      ),
     str(Output.CURSOR2D) : DecoderSpec(dim=2, 
+                                       target_dim=2,
                                        type=OutputType.CONTINUOUS, 
                                        timestamp_key="behavior.timestamps",
                                        value_key="behavior.cursor_pos", 
-                                      )
+                                       loss_fn="mse",
+                                      ),
+    str(Output.WRITING_CHARACTER) : DecoderSpec(dim=len(Character), 
+                                     target_dim=1,
+                                     target_dtype="long",
+                                     type=OutputType.MULTINOMIAL, 
+                                     timestamp_key="behavior.timestamps",
+                                     value_key="behavior.letters", 
+                                     loss_fn="bce",
+                                    ),
+    str(Output.WRITING_LINE) : DecoderSpec(
+                                    dim=len(Line), 
+                                    target_dim=1,
+                                    target_dtype="long",
+                                    type=OutputType.MULTINOMIAL, 
+                                    timestamp_key="behavior.timestamps",
+                                    value_key="behavior.letters", 
+                                    loss_fn="bce",
+                                )
 }

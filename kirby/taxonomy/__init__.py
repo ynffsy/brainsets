@@ -18,3 +18,4 @@ from .taxonomy import (
     OutputType
 )
 from .macaque import Macaque
+from .weight_registry import weight_registry

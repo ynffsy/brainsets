@@ -1,4 +1,4 @@
-from .taxonomy import StringIntEnum
+from .core import StringIntEnum
 
 # Nomenclature from CHARM: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2944191/
 # These areas are defined at different levels of precision - have a look at the CHARM_Key_table
