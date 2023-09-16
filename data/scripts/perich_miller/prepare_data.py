@@ -522,6 +522,8 @@ if __name__ == "__main__":
         SubjectDescription(id="jaco", species=Species.MACACA_MULATTA),
         SubjectDescription(id="mrt", species=Species.MACACA_MULATTA),
     ]
+
+    known_sessions = {}
     
     # find all files with extension .nwb in folder_path
     for file_path in tqdm(sorted(find_files_by_extension(raw_folder_path, extension))):
@@ -535,6 +537,14 @@ if __name__ == "__main__":
         # determine session_id and sortset_id
         animal, task, recording_date = extract_info_from_filename(Path(file_path).stem)
         session_id = f"{animal}_{recording_date}_{task}"
+
+        # There's one instance where there's a duplicate session id (chewie_20160929_CO)
+        # we skip it.
+        if session_id in known_sessions:
+            continue
+
+        known_sessions[session_id] = True
+
         # spike sorting was done on all data from the same day, so we should 
         # have the same neurons/units.
         sortset_id = f"{animal}_{recording_date}"
