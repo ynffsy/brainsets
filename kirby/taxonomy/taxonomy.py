@@ -19,9 +19,15 @@ class RecordingTech(StringIntEnum):
     UTAH_ARRAY_WAVEFORMS = 2
     UTAH_ARRAY_LFPS = 3
     UTAH_ARRAY_AVERAGE_WAVEFORMS = 4
-
     # As a subordinate category
     UTAH_ARRAY = 9
+
+    NEUROPIXELS_SPIKES = 10
+    NEUROPIXELS_THRESHOLDCROSSINGS = 11
+    NEUROPIXELS_WAVEFORMS = 12
+    NEUROPIXELS_LFPS = 13
+    # As a subordinate category
+    NEUROPIXELS_ARRAY = 19
 
 
 class Task(StringIntEnum):
@@ -38,6 +44,9 @@ class Task(StringIntEnum):
 
     CONTINUOUS_WRITING = 4
 
+    # Allen data
+    DISCRETE_VISUAL_CODING = 5
+
 
 class Stimulus(StringIntEnum):
     """Stimuli can variously act like inputs (for conditioning) or like outputs."""
@@ -46,6 +55,8 @@ class Stimulus(StringIntEnum):
     TARGETON = 1
     GO_CUE = 2
     TARGETACQ = 3
+
+    DRIFTING_GRATINGS = 4
 
 
 class Output(StringIntEnum):
@@ -64,11 +75,21 @@ class Output(StringIntEnum):
 
     CURSORVELOCITY2D = 12
 
+    # Allen data
+    DRIFTING_GRATINGS = 13
+
+
 
 class Species(StringIntEnum):
     MACACA_MULATTA = 0
     HOMO_SAPIENS = 1
+    MUS_MUSCULUS = 2
 
+
+class Sex(StringIntEnum):
+    UNKNOWN = 0
+    MALE = 1
+    FEMALE = 2
 
 class Dictable:
     """A dataclass that can be converted to a dict."""
@@ -118,7 +139,9 @@ class SortsetDescription(Dictable):
 class SubjectDescription(Dictable):
     id: str
     species: Species
-    age: float = 0.0
+    age: float = 0.0  # in days
+    sex: Sex = Sex.UNKNOWN
+    genotype: str = "unknown"  # no idea how many there will be for now.
 
 
 @dataclass
@@ -226,5 +249,13 @@ decoder_registry = {
                                     timestamp_key="behavior.timestamps",
                                     value_key="behavior.letters", 
                                     loss_fn="bce",
-                                )
+                                ),
+    str(Output.DRIFTING_GRATINGS) : DecoderSpec(dim=8, 
+                                    target_dim=1,
+                                    target_dtype="long",
+                                    type=OutputType.MULTINOMIAL, 
+                                    timestamp_key="stimuli_segments.timestamps",
+                                    value_key="stimuli_segments.drifting_class", 
+                                    loss_fn="bce",
+                                ),
 }

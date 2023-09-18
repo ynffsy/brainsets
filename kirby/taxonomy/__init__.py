@@ -4,6 +4,7 @@ from .taxonomy import (
     Stimulus,
     Output,
     Species,
+    Sex,
     DandisetDescription,
     SubjectDescription,
     SortsetDescription,

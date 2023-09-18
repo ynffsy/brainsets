@@ -11,9 +11,9 @@ Links or scripts to download the data should be included in the `README.md` file
 If you are using the Dyer Lab clusters, all data is mounted in `/kirby`. 
 
 Currently the following datasets are available:
-| Folder | Status | Description |
-| --- | --- | --- | 
-| Perich, Miller | 
+| Folder | Status | Raw data size | Processed data size |
+| --- | --- | --- | --- | 
+| Perich, Miller | | 25G | 97G | 
 | Philip, Makin | 
 | Churchland, Shenoy |
 | Flint, Slutzky | 
