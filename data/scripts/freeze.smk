@@ -9,13 +9,16 @@ rule freeze:
     shell:
         f"""
         mkdir -p {COMPRESSED_DIR}/{DATASET}
-        for split in train valid test; do
+        for split in valid test train; do
             # Single lz4 archive.
+            echo $split
+            echo "Compressing"
             cd {PROCESSED_DIR}/{DATASET}/$split && \
                 tar -cf - . | lz4 -1 > {COMPRESSED_DIR}/{DATASET}/$split.tar.lz4
             cd - > /dev/null
+            echo "Splitting into shards"
             # Multiple shards for webdataset usage.
-            python ../../split_and_tar.py --input_dir "{PROCESSED_DIR}/{DATASET}/$split" --output_dir "{COMPRESSED_DIR}/{DATASET}" --prefix $split
+            python split_and_tar.py --input_dir "{PROCESSED_DIR}/{DATASET}/$split" --output_dir "{COMPRESSED_DIR}/{DATASET}" --prefix $split
         done
         cp {{input.description}} {COMPRESSED_DIR}/{DATASET}/description.yaml
         """
@@ -27,10 +30,7 @@ rule unfreeze:
         valid_tar = f"{COMPRESSED_DIR}/{DATASET}/valid.tar.lz4",
         desc_in = f"{COMPRESSED_DIR}/{DATASET}/description.yaml"
     output:
-        train_dir = directory(f"{PROCESSED_DIR}/{DATASET}/train"),
-        test_dir = directory(f"{PROCESSED_DIR}/{DATASET}/test"),
-        valid_dir = directory(f"{PROCESSED_DIR}/{DATASET}/valid"),
-        desc_out = f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        unfreeze_out = f"{PROCESSED_DIR}/{DATASET}/unfreeze.done"
     shell:
         f"""
         for split in valid test train; do
@@ -40,4 +40,5 @@ rule unfreeze:
             lz4 -d -c {COMPRESSED_DIR}/{DATASET}/$split.tar.lz4 | tar -xf - -C {PROCESSED_DIR}/{DATASET}/$split
         done
         cp {COMPRESSED_DIR}/{DATASET}/description.yaml {PROCESSED_DIR}/{DATASET}/description.yaml
+        touch {{output.unfreeze_out}}
         """

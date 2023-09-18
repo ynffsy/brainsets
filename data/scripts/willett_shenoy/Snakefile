@@ -16,7 +16,8 @@ rule all:
 # Rule that downloads the dataset from the internet using wget
 rule download_dataset:
     output:
-        f"{RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz"
+        f"{RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz",
+        f"{RAW_DIR}/{DATASET}/handwritingBCIData/readme.pdf"
     shell:
         f"""
         mkdir -p {RAW_DIR}/{DATASET}
@@ -36,3 +37,5 @@ rule prepare_data:
         mkdir -p {COMPRESSED_DIR}/{DATASET}
         python3 {{input.py_script}} --input_dir {RAW_DIR}/{DATASET}/handwritingBCIData --output_dir {PROCESSED_DIR}/{DATASET}
         """
+
+include: "../freeze.smk"
