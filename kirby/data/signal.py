@@ -140,6 +140,11 @@ def cube_to_long(
         channels_ = np.concatenate(channels_)
         channel_names = [f"{channel_prefix}{c}" for c in channels_]
 
+        tidx = np.argsort(ts_)
+        ts_ = ts_[tidx]
+        channel_names = [channel_names[x] for x in tidx]
+
+
         trials.append(
             IrregularTimeSeries(
                 timestamps=torch.tensor(ts_),

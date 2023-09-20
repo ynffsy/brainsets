@@ -260,7 +260,7 @@ def extract_trial_metadata_co(mat_dict: dict, behavior: IrregularTimeSeries):
             # each trial will have two reach directions, one during the reach phase, 
             # and one during the return phase (the opposite direction)
             stimuli_segment_start.extend([trials.go_cue_time[i], trials.target_acq_time[i]])
-            stimuli_segment_end.append([trials.target_acq_time[i], trials.end[i]])
+            stimuli_segment_end.extend([trials.target_acq_time[i], trials.end[i]])
             stimuli_reach_direction_id.extend([trials.target_id[i], np.mod(trials.target_id[i], 4)])
             stimuli_reach_direction_deg.extend([trials.target_dir[i], np.mod(trials.target_dir[i], 360.)])
         else:
@@ -273,9 +273,15 @@ def extract_trial_metadata_co(mat_dict: dict, behavior: IrregularTimeSeries):
     
     behavior.type = behavior_type
 
+    sort_idx = np.argsort(stimuli_timestamps)
+    stimuli_timestamps = np.array(stimuli_timestamps)[sort_idx]
+    stimuli_type = np.array(stimuli_type)[sort_idx]
+
+    valid_idx = ~np.isnan(stimuli_timestamps)
+
     stimuli_events = IrregularTimeSeries(
-        timestamps=torch.tensor(stimuli_timestamps),
-        type=torch.tensor(stimuli_type)
+        timestamps=torch.tensor(stimuli_timestamps[valid_idx]),
+        type=torch.tensor(stimuli_type[valid_idx])
         )
     
     stimuli_segments = Interval(
@@ -329,11 +335,17 @@ def extract_trial_metadata_rt(mat_dict: dict, behavior: IrregularTimeSeries):
 
     behavior.type = behavior_type
     
+    sort_idx = np.argsort(stimuli_timestamps)
+    stimuli_timestamps = np.array(stimuli_timestamps)[sort_idx]
+    stimuli_type = np.array(stimuli_type)[sort_idx]
+
+    valid_idx = ~np.isnan(stimuli_timestamps)
+
     stimuli_events = IrregularTimeSeries(
-        timestamps=torch.tensor(stimuli_timestamps),
-        type=torch.tensor(stimuli_type)
+        timestamps=torch.tensor(stimuli_timestamps[valid_idx]),
+        type=torch.tensor(stimuli_type[valid_idx])
         )
-    
+        
     stimuli_segments = None
     
     return trials, behavior, stimuli_events, stimuli_segments
