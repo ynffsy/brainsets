@@ -9,6 +9,8 @@ PERM_DIR = config["perm_dir"]
 config["RAW_DIR"] = str(Path(TMP_DIR) / "raw") if config["tmp_flag"]["raw"] else str(Path(PERM_DIR) / "raw")
 config["PROCESSED_DIR"] = str(Path(TMP_DIR) / "processed") if config["tmp_flag"]["processed"] else str(Path(PERM_DIR) / "processed")
 config["COMPRESSED_DIR"] = str(Path(TMP_DIR) / "compressed") if config["tmp_flag"]["compressed"] else str(Path(PERM_DIR) / "compressed")
+config["UNCOMPRESSED_DIR"] = str(Path(TMP_DIR) / "uncompressed") if config["tmp_flag"]["uncompressed"] else str(Path(PERM_DIR) / "uncompressed")
+
 
 # include all snakefiles for all individual datasets
 # includes are relative to the directory of the Snakefile in which they occur

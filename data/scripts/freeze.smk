@@ -1,3 +1,6 @@
+COMPRESSED_DIR = config["COMPRESSED_DIR"]
+UNCOMPRESSED_DIR = config["UNCOMPRESSED_DIR"]
+
 rule freeze:
     input:
         description = f"{PROCESSED_DIR}/{DATASET}/description.yaml"
@@ -30,15 +33,15 @@ rule unfreeze:
         valid_tar = f"{COMPRESSED_DIR}/{DATASET}/valid.tar.lz4",
         desc_in = f"{COMPRESSED_DIR}/{DATASET}/description.yaml"
     output:
-        unfreeze_out = f"{PROCESSED_DIR}/{DATASET}/unfreeze.done"
+        unfreeze_out = f"{UNCOMPRESSED_DIR}/{DATASET}/unfreeze.done"
     shell:
         f"""
         for split in valid test train; do
             # Uncompress and untar the data.
             echo $split
-            mkdir -p {PROCESSED_DIR}/{DATASET}/$split
-            lz4 -d -c {COMPRESSED_DIR}/{DATASET}/$split.tar.lz4 | tar -xf - -C {PROCESSED_DIR}/{DATASET}/$split
+            mkdir -p {UNCOMPRESSED_DIR}/{DATASET}/$split
+            lz4 -d -c {COMPRESSED_DIR}/{DATASET}/$split.tar.lz4 | tar -xf - -C {UNCOMPRESSED_DIR}/{DATASET}/$split
         done
-        cp {COMPRESSED_DIR}/{DATASET}/description.yaml {PROCESSED_DIR}/{DATASET}/description.yaml
+        cp {COMPRESSED_DIR}/{DATASET}/description.yaml {UNCOMPRESSED_DIR}/{DATASET}/description.yaml
         touch {{output.unfreeze_out}}
         """

@@ -5,6 +5,7 @@ from typing import List
 
 import dateutil
 import numpy as np
+import numpy.testing as npt
 import torch
 from scipy.io import loadmat
 
@@ -13,6 +14,7 @@ from kirby.data.data import (
     Channel,
     Data,
     Hemisphere,
+    Interval,
     IrregularTimeSeries,
     Probe,
 )
@@ -105,13 +107,11 @@ def process_single_letters(
         assert found
 
         data = single_letters_data[f"neuralActivityCube_{letter}"]
-        if data.min() > 1:
-            continue
 
         spike_cubes.append(data)
-        labels += [int(resolved)] * len(spike_cubes)
-        valid_mask = np.arange(len(spike_cubes)) % 9 == 2
-        test_mask = np.arange(len(spike_cubes)) % 9 == 5
+        labels += [int(resolved)] * len(data)
+        valid_mask = np.arange(len(data)) % 9 == 2
+        test_mask = np.arange(len(data)) % 9 == 5
         train_mask = ~valid_mask & ~test_mask
         train_masks.append(train_mask)
         valid_masks.append(valid_mask)
@@ -121,14 +121,19 @@ def process_single_letters(
     valid_masks = np.concatenate(valid_masks)
     test_masks = np.concatenate(test_masks)
 
+    assert len(test_masks) == len(labels)
+
     folds = np.where(
         train_masks, "train", np.where(valid_masks, "valid", "test")
     )
 
     spike_cubes = np.concatenate(spike_cubes, axis=0)
 
-    # We only select 1 second, which was the length of the go period.
-    spike_cubes = spike_cubes[:, 51:151, :]
+    assert spike_cubes.shape[0] == len(test_masks)
+
+    # We only select 1.6 seconds, from -.3 to 1.3 seconds, where the go period is from
+    # 0 to 1 seconds.
+    spike_cubes = spike_cubes[:, 59:, :]
     ts = (
         np.arange(0.5, 0.5 + spike_cubes.shape[1]) / 100.0
     )  # 100 Hz sampling rate
@@ -141,20 +146,24 @@ def process_single_letters(
 
     # TODO: use the geometry map.
     counters = collections.defaultdict(int)
+    letters = collections.defaultdict(list)
     trial_descriptions = []
 
     for trial, label, fold in zip(trials, labels, folds):
-        behavior = IrregularTimeSeries(
-            timestamps=torch.Tensor([0]), 
+        stimuli_segments = Interval(
+            start=torch.Tensor([0]),
+            end=torch.Tensor([1.6]),
+            timestamps=torch.Tensor([0.8]), # Assign the label to the center of the interval.
             letters=torch.tensor([[int(label)]]),
             behavior_type=torch.tensor([0])
         )
         data = Data(
             spikes=trial,
             units=units,
-            behavior=behavior,
+            behavior=None,
+            stimuli_segments=stimuli_segments,
             start=0,
-            end=1.0,
+            end=ts[-1],
             probes=probes,
             session=session_name,
             sortset=sortset_name,
@@ -181,6 +190,18 @@ def process_single_letters(
         )
 
         counters[fold] += 1
+        letters[fold].append(label)
+
+    # Double check that the frequencies are balanced.
+    char_counts = {}
+    for fold in ["train", "valid", "test"]:
+        _, char_counts[fold] = np.unique(np.array(letters[fold]), return_counts=True)
+    
+    npt.assert_allclose(char_counts["train"] / char_counts["train"].sum(),
+                        char_counts["test"] / char_counts["test"].sum())
+
+    npt.assert_allclose(char_counts["train"] / char_counts["train"].sum(),
+                        char_counts["valid"] / char_counts["valid"].sum())
 
     if straight_lines:
         task = Task.DISCRETE_WRITING_LINE
@@ -200,7 +221,7 @@ def process_single_letters(
         task=task,
         inputs={RecordingTech.UTAH_ARRAY: "spikes"},
         stimuli={},
-        outputs={output: "behavior.letters"},
+        outputs={output: "stimuli_segments.letters"},
         trials=trial_descriptions,
     )
 
