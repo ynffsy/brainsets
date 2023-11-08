@@ -339,6 +339,9 @@ if __name__ == "__main__":
                 basename = f"{session_id}_{i:05}"
                 filename = f"{basename}.pt"
                 path = os.path.join(processed_folder_path, fold, filename)
+
+                # precompute map from unit name to indices of that unit in data.spikes
+                sample.spikes.precompute_index_map(field='names')
                 torch.save(sample, path)
 
                 footprints[fold].append(os.path.getsize(path))

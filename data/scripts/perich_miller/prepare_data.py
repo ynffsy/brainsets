@@ -129,7 +129,10 @@ def extract_spikes(mat_dict: dict, prefix: str):
         else:
             electrode_row = units[i][5][0][0]
             electrode_col = units[i][6][0][0]
-        unit_name = f"{prefix}/{channel_label}/sorted_{sorted_id}"
+        
+        # note: {prefix}/{channel_label}/sorted_{sorted_id} does not appear to be unique
+        # we temporarily add the index i to garantee uniqueness in the unit_name
+        unit_name = f"{prefix}/{channel_label}/sorted_{sorted_id}/unit_{i}"
 
         # get spiketimes
         spiketimes = units[i][7][0][0][2][0, 0][:, 0]
@@ -645,6 +648,9 @@ if __name__ == "__main__":
                 basename = f"{session_id}_{i:05}"
                 filename = f"{basename}.pt"
                 path = os.path.join(processed_folder_path, fold, filename)
+
+                # precompute map from unit name to indices of that unit in data.spikes
+                sample.spikes.precompute_index_map(field='names')
                 torch.save(sample, path)
 
                 footprints[fold].append(os.path.getsize(path))
