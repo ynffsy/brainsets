@@ -85,6 +85,7 @@ def process_single_letters(
     valid_masks = []
     test_masks = []
 
+    nchars = 0
     for key in single_letters_data.keys():
         if not key.startswith("neuralActivityCube_"):
             continue
@@ -109,25 +110,42 @@ def process_single_letters(
         data = single_letters_data[f"neuralActivityCube_{letter}"]
 
         spike_cubes.append(data)
-        labels += [int(resolved)] * len(data)
+        labels.append(np.array([int(resolved)] * len(data)))
         valid_mask = np.arange(len(data)) % 9 == 2
         test_mask = np.arange(len(data)) % 9 == 5
         train_mask = ~valid_mask & ~test_mask
         train_masks.append(train_mask)
         valid_masks.append(valid_mask)
         test_masks.append(test_mask)
+        nchars += 1
 
-    train_masks = np.concatenate(train_masks)
-    valid_masks = np.concatenate(valid_masks)
-    test_masks = np.concatenate(test_masks)
+    print(f"Number of distinct characters: {nchars}")
+    print(f"Number of repeats per character: {len(train_mask)}")
+    
+
+    labels = np.stack(labels, axis=1).ravel()
+    train_masks = np.stack(train_masks, axis=1).ravel()
+    valid_masks = np.stack(valid_masks, axis=1).ravel()
+    test_masks = np.stack(test_masks, axis=1).ravel()
+
+    # Did we do the split the right way around? Double check.
+    # If we did the split the wrong way around, we should switch rapidly between train
+    # and test folds (fold is fast dim, character is slow dim).
+    # This will make it easier to e.g. use exactly one trial per character for 
+    # calibration.
+    assert abs(np.diff(1 * train_masks)).sum() < 20
+
+    spike_cubes = np.stack(spike_cubes, axis=1)
+    spike_cubes = spike_cubes.reshape(
+        (spike_cubes.shape[0] * spike_cubes.shape[1], spike_cubes.shape[2], -1)
+    )
+    print(f"Number of threshold crossings: {spike_cubes.sum()}")
 
     assert len(test_masks) == len(labels)
 
     folds = np.where(
         train_masks, "train", np.where(valid_masks, "valid", "test")
     )
-
-    spike_cubes = np.concatenate(spike_cubes, axis=0)
 
     assert spike_cubes.shape[0] == len(test_masks)
 
@@ -142,7 +160,6 @@ def process_single_letters(
     trials, units = signal.cube_to_long(
         ts, spike_cubes, channel_prefix=channel_prefix
     )
-    labels = np.array(labels)
 
     # TODO: use the geometry map.
     counters = collections.defaultdict(int)
@@ -153,9 +170,11 @@ def process_single_letters(
         stimuli_segments = Interval(
             start=torch.Tensor([0]),
             end=torch.Tensor([1.6]),
-            timestamps=torch.Tensor([0.8]), # Assign the label to the center of the interval.
+            timestamps=torch.Tensor(
+                [0.8]
+            ),  # Assign the label to the center of the interval.
             letters=torch.tensor([[int(label)]]),
-            behavior_type=torch.tensor([0])
+            behavior_type=torch.tensor([0]),
         )
         data = Data(
             spikes=trial,
@@ -185,7 +204,9 @@ def process_single_letters(
 
         trial_descriptions.append(
             TrialDescription(
-                id=basename, footprints={}, chunks={fold.item(): [chunk_description]}
+                id=basename,
+                footprints={},
+                chunks={fold.item(): [chunk_description]},
             )
         )
 
@@ -195,13 +216,19 @@ def process_single_letters(
     # Double check that the frequencies are balanced.
     char_counts = {}
     for fold in ["train", "valid", "test"]:
-        _, char_counts[fold] = np.unique(np.array(letters[fold]), return_counts=True)
-    
-    npt.assert_allclose(char_counts["train"] / char_counts["train"].sum(),
-                        char_counts["test"] / char_counts["test"].sum())
+        _, char_counts[fold] = np.unique(
+            np.array(letters[fold]), return_counts=True
+        )
 
-    npt.assert_allclose(char_counts["train"] / char_counts["train"].sum(),
-                        char_counts["valid"] / char_counts["valid"].sum())
+    npt.assert_allclose(
+        char_counts["train"] / char_counts["train"].sum(),
+        char_counts["test"] / char_counts["test"].sum(),
+    )
+
+    npt.assert_allclose(
+        char_counts["train"] / char_counts["train"].sum(),
+        char_counts["valid"] / char_counts["valid"].sum(),
+    )
 
     if straight_lines:
         task = Task.DISCRETE_WRITING_LINE
