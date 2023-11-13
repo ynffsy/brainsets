@@ -72,10 +72,14 @@ def extract_info_from_filename(filename):
         # Decide the format based on the position relative to task_type in the filename
         if filename.index(recording_date) < filename.index(task_type):
             # Assume yyyymmdd format
-            recording_date = f"{recording_date[0:4]}{recording_date[4:6]}{recording_date[6:8]}"
+            recording_date = (
+                f"{recording_date[0:4]}{recording_date[4:6]}{recording_date[6:8]}"
+            )
         else:
             # Assume mmddyyyy format
-            recording_date = f"{recording_date[4:]}{recording_date[0:2]}{recording_date[2:4]}"
+            recording_date = (
+                f"{recording_date[4:]}{recording_date[0:2]}{recording_date[2:4]}"
+            )
 
         return animal_name.lower(), task_type, recording_date
     else:
@@ -113,7 +117,7 @@ def extract_spikes(mat_dict: dict, prefix: str):
         pin = units[i][3][0][0]
         channel_label = units[i][4]
         if isinstance(channel_label, np.ndarray):
-            channel_label = ''.join(channel_label)
+            channel_label = "".join(channel_label)
         if len(units[i][5]) == 0:
             electrode_row = electrode_col = np.nan
         else:
@@ -129,9 +133,7 @@ def extract_spikes(mat_dict: dict, prefix: str):
         spiketimes = units[i][7][0][0][2][0, 0][:, 0]
         spikes.append(spiketimes)
         names.append([unit_name] * len(spiketimes))
-        types.append(
-            np.ones_like(spiketimes) * int(RecordingTech.UTAH_ARRAY_SPIKES)
-        )
+        types.append(np.ones_like(spiketimes) * int(RecordingTech.UTAH_ARRAY_SPIKES))
 
         # get waveforms
         wf = units[i][7][0][0][2][0, 1][:]  # 48d waveform
@@ -191,9 +193,7 @@ def extract_spikes(mat_dict: dict, prefix: str):
     units = Data(**unit_meta_long)
 
     names_to_index = {name: i for i, name in enumerate(units.unit_name)}
-    spikes.unit_index = torch.tensor(
-        [names_to_index[name] for name in spikes.names]
-    )
+    spikes.unit_index = torch.tensor([names_to_index[name] for name in spikes.names])
 
     return spikes, units, list(areas)
 
@@ -241,10 +241,10 @@ def extract_trial_metadata_co(mat_dict: dict, behavior: IrregularTimeSeries):
         result=values["result"],
     )
 
-    # behavior_type is a segmentation map that indicates which period of the trial we are in.
+    # behavior_type is a segmentation map that indicates which period of the trial we
+    # are in.
     behavior_type = (
-        torch.ones_like(behavior.timestamps, dtype=torch.long)
-        * REACHING.RANDOM
+        torch.ones_like(behavior.timestamps, dtype=torch.long) * REACHING.RANDOM
     )
     # stimuli events
     stimuli_timestamps = []
@@ -276,9 +276,7 @@ def extract_trial_metadata_co(mat_dict: dict, behavior: IrregularTimeSeries):
             stimuli_segment_start.extend(
                 [trials.go_cue_time[i], trials.target_acq_time[i]]
             )
-            stimuli_segment_end.extend(
-                [trials.target_acq_time[i], trials.end[i]]
-            )
+            stimuli_segment_end.extend([trials.target_acq_time[i], trials.end[i]])
             stimuli_reach_direction_id.extend(
                 [trials.target_id[i], np.mod(trials.target_id[i], 4)]
             )
@@ -292,7 +290,8 @@ def extract_trial_metadata_co(mat_dict: dict, behavior: IrregularTimeSeries):
                 & (behavior.timestamps < trials.end[i])
             ] = REACHING.INVALID
 
-        # collect stimuli events: target shown, go cue, target acquired, note that some of these values will be nan
+        # collect stimuli events: target shown, go cue, target acquired, note that some
+        # of these values will be nan
         stimuli_timestamps.extend(
             [
                 trials.target_on_time[i],
@@ -345,16 +344,17 @@ def extract_trial_metadata_rt(mat_dict: dict, behavior: IrregularTimeSeries):
         num_attempts=torch.tensor(values["numAttempted"][:, 0]),
     )
 
-    # behavior_type is a segmentation map that indicates which period of the trial we are in.
+    # behavior_type is a segmentation map that indicates which period of the trial we
+    # are in.
     behavior_type = (
-        torch.ones_like(behavior.timestamps, dtype=torch.long)
-        * REACHING.RANDOM
+        torch.ones_like(behavior.timestamps, dtype=torch.long) * REACHING.RANDOM
     )
     # stimuli events
     stimuli_timestamps = []
     stimuli_type = []
     # stimuli segments
-    # todo: estimate the reach direction in degrees based on the angle between consecutive targets
+    # todo: estimate the reach direction in degrees based on the angle between
+    # consecutive targets
     stimuli_segment_start = []
     stimuli_segment_end = []
     stimuli_reach_direction_deg = []
@@ -480,9 +480,7 @@ def filter_buckets(buckets):
     return out
 
 
-def check_co_baseline_trial_validity(
-    trial, min_duration=0.5, max_duration=6.0
-):
+def check_co_baseline_trial_validity(trial, min_duration=0.5, max_duration=6.0):
     # check if the trial was successful
     cond1 = trial["result"] == "R"
     cond2 = not trial["target_id"].isnan()
@@ -494,9 +492,7 @@ def check_co_baseline_trial_validity(
     return all([cond1, cond2, cond3])
 
 
-def check_rt_baseline_trial_validity(
-    trial, min_duration=2.0, max_duration=10.0
-):
+def check_rt_baseline_trial_validity(trial, min_duration=2.0, max_duration=10.0):
     # check if the trial was successful
     cond1 = trial["result"] == "R"
     cond2 = trial["num_attempts"] == 4
@@ -511,18 +507,12 @@ def check_rt_baseline_trial_validity(
 def split_and_get_train_valid_test(
     trials, test_size=0.2, valid_size=0.1, random_state=42
 ):
-    assert 0 < valid_size < 1, "valid_size must be positive, got {}".format(
-        valid_size
-    )
-    assert 0 < test_size < 1, "test_size must be positive, got {}".format(
-        test_size
-    )
+    assert 0 < valid_size < 1, "valid_size must be positive, got {}".format(valid_size)
+    assert 0 < test_size < 1, "test_size must be positive, got {}".format(test_size)
 
     num_trials = len(trials)
     train_size = 1.0 - test_size - valid_size
-    assert 0 < train_size < 1, "train_size must be positive, got {}".format(
-        train_size
-    )
+    assert 0 < train_size < 1, "train_size must be positive, got {}".format(train_size)
 
     train_valid_ids, test_ids = train_test_split(
         np.arange(num_trials), test_size=test_size, random_state=random_state
@@ -616,9 +606,7 @@ if __name__ == "__main__":
     known_sessions = {}
 
     # find all files with extension .nwb in folder_path
-    for file_path in tqdm(
-        sorted(find_files_by_extension(raw_folder_path, extension))
-    ):
+    for file_path in tqdm(sorted(find_files_by_extension(raw_folder_path, extension))):
         if not "BL" in file_path:
             # for now, we will skip files that correspond to perturbation sessions
             # and only use the baseline experiments.
@@ -627,10 +615,11 @@ if __name__ == "__main__":
         logging.info(f"Processing file: {file_path}")
 
         # determine session_id and sortset_id
-        animal, task, recording_date = extract_info_from_filename(
-            Path(file_path).stem
-        )
+        animal, task, recording_date = extract_info_from_filename(Path(file_path).stem)
         session_id = f"{animal}_{recording_date}_{task}"
+
+        if session_id == "mihili_20150512_CO":
+            continue
 
         # There's one instance where there's a duplicate session id (chewie_20160929_CO)
         # we skip it.
@@ -674,12 +663,8 @@ if __name__ == "__main__":
             raise ValueError("Unknown task type")
 
         # sanity checkpoint: check that recording started at 0
-        first_recorded_point = min(
-            behavior.timestamps[0], spikes.timestamps[0]
-        )
-        last_recorded_point = max(
-            behavior.timestamps[-1], spikes.timestamps[-1]
-        )
+        first_recorded_point = min(behavior.timestamps[0], spikes.timestamps[0])
+        last_recorded_point = max(behavior.timestamps[-1], spikes.timestamps[-1])
         assert (
             abs(first_recorded_point - session_start) < 10
             and abs(last_recorded_point - session_end) < 10
@@ -730,13 +715,9 @@ if __name__ == "__main__":
         test_slices = collect_slices(data, test_trials)
 
         # the remaining data (unstructured) is used for training
-        train_buckets = list(
-            data.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING)
-        )
+        train_buckets = list(data.bucketize(WINDOW_SIZE, STEP_SIZE, JITTER_PADDING))
         # we make sure to exclude validation and test data from the training buckets
-        train_buckets = exclude_from_train(
-            train_buckets, valid_trials + test_trials
-        )
+        train_buckets = exclude_from_train(train_buckets, valid_trials + test_trials)
         # remove buckets where there are a lot of outliers
         train_buckets = filter_buckets(train_buckets)
 
@@ -756,7 +737,7 @@ if __name__ == "__main__":
                 path = os.path.join(processed_folder_path, fold, filename)
 
                 # precompute map from unit name to indices of that unit in data.spikes
-                sample.spikes.precompute_index_map(field='names')
+                sample.spikes.precompute_index_map(field="names")
                 torch.save(sample, path)
 
                 footprints[fold].append(os.path.getsize(path))
@@ -820,14 +801,10 @@ if __name__ == "__main__":
         if sortsets[sortset_id].units:
             # Check whether the unit names are consistent with the previous ones
             print("Checking unit names, reusing sortset")
-            assert (
-                sortsets[sortset_id].units.tolist() == units.unit_name.tolist()
-            )
+            assert sortsets[sortset_id].units.tolist() == units.unit_name.tolist()
         else:
             print("Checking for unique unit names")
-            assert len(units.unit_name.tolist()) == len(
-                set(units.unit_name.tolist())
-            )
+            assert len(units.unit_name.tolist()) == len(set(units.unit_name.tolist()))
             sortsets[sortset_id].units = units.unit_name.tolist()
 
         sortsets[sortset_id].sessions.append(session)
