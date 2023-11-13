@@ -1,6 +1,0 @@
-Mihili_RT_FF_BL_02142014_001_stripped 118
-Mihili_RT_FF_BL_02212014_001_stripped 129
-Mihili_RT_FF_BL_02242014_001_stripped 123
-Mihili_RT_VR_BL_01142014_001_stripped 166
-Mihili_RT_VR_BL_01152014_001_stripped 164
-Mihili_RT_VR_BL_01162014_001_stripped 161
