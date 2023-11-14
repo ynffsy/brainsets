@@ -25,6 +25,8 @@ rule prepare_data:
         mat_files = f"{RAW_DIR}/{DATASET}/ReachingData/Chewie_20131003_CO_VR_BL_001_stripped.mat",
     output:
         description = f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+    log:
+        f".snakemake/logs/{DATASET}/prepare_data.log"
     shell:
         f"""
         mkdir -p {PROCESSED_DIR}/{DATASET}
