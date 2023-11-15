@@ -1,15 +1,25 @@
 from snakemake.utils import min_version
 min_version("6.0")
 
-configfile: "configs/data.yaml"
+local_env = snakemake.shell(f"source ./detect_environment.sh", read=True).strip()
+print(f"Using environment {local_env}, as determined by detect_environment.sh")
+configfile: f"configs/environments/{local_env}.yaml"
+
+def expand_path(path):
+    # Expands environment variables like $VAR
+    path = os.path.expandvars(path)
+
+    # Expands the '~' symbol to the user's home directory
+    path = os.path.expanduser(path)
+
+    return path
 
 # get various paths from config file
-TMP_DIR = config["tmp_dir"]
-PERM_DIR = config["perm_dir"]
-config["RAW_DIR"] = str(Path(TMP_DIR) / "raw") if config["tmp_flag"]["raw"] else str(Path(PERM_DIR) / "raw")
-config["PROCESSED_DIR"] = str(Path(TMP_DIR) / "processed") if config["tmp_flag"]["processed"] else str(Path(PERM_DIR) / "processed")
-config["COMPRESSED_DIR"] = str(Path(TMP_DIR) / "compressed") if config["tmp_flag"]["compressed"] else str(Path(PERM_DIR) / "compressed")
-config["UNCOMPRESSED_DIR"] = str(Path(TMP_DIR) / "uncompressed") if config["tmp_flag"]["uncompressed"] else str(Path(PERM_DIR) / "uncompressed")
+config["TMP_DIR"] = expand_path(f"{config['tmp_dir']}")
+config["RAW_DIR"] = expand_path(f"{config['raw_dir']}/raw")
+config["PROCESSED_DIR"] = expand_path(f"{config['processed_dir']}/processed")
+config["COMPRESSED_DIR"] = expand_path(f"{config['compressed_dir']}/compressed")
+config["UNCOMPRESSED_DIR"] = expand_path(f"{config['uncompressed_dir']}/uncompressed")
 
 
 # include all snakefiles for all individual datasets
