@@ -2,6 +2,7 @@ from pathlib import Path
 
 DATASET = "willett_shenoy"
 
+TMP_DIR = config["TMP_DIR"]
 RAW_DIR = config["RAW_DIR"]
 PROCESSED_DIR = config["PROCESSED_DIR"]
 
@@ -13,16 +14,16 @@ rule all:
         f"{PROCESSED_DIR}/{DATASET}/description.yaml"
 
 # Rule that downloads the dataset from the internet using wget
-rule download_dataset:
+rule download_all:
     output:
         f"{RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz",
         f"{RAW_DIR}/{DATASET}/handwritingBCIData/readme.pdf"
     shell:
         f"""
-        mkdir -p {RAW_DIR}/{DATASET}
-        wget -O {RAW_DIR}/{DATASET}/{DATASET}.zip {url}
-        unzip -d {RAW_DIR}/{DATASET} {RAW_DIR}/{DATASET}/{DATASET}.zip
-        tar -xzf {RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz -C {RAW_DIR}/{DATASET}
+        mkdir -p {TMP_DIR}/{DATASET}
+        wget -O {TMP_DIR}/{DATASET}/{DATASET}.zip {url}
+        unzip -d {TMP_DIR}/{DATASET} -o {RAW_DIR}/{DATASET}/{DATASET}.zip
+        tar -xzf {TMP_DIR}/{DATASET}/handwritingBCIData.tar.gz -C {RAW_DIR}/{DATASET}
         """
 
 rule prepare_data:

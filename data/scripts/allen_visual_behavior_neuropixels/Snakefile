@@ -25,7 +25,7 @@ rule all:
     input:
         f"{PROCESSED_DIR}/{DATASET}/description.yaml"
 
-rule download_dataset:
+rule download_one:
     output:
         nwb_file = f"{RAW_DIR}/{DATASET}/session_{{session_id}}/session_{{session_id_}}.nwb"
     shell:
@@ -33,6 +33,10 @@ rule download_dataset:
         mkdir -p {RAW_DIR}/{DATASET}
         python data/scripts/{DATASET}/download_data.py --output_dir {RAW_DIR}/{DATASET} --session_id {{wildcards.session_id}}
         """
+
+rule download_all:
+    input:
+        nwb_files = expand(f"{RAW_DIR}/{DATASET}/session_{{dataset}}/session_{{dataset}}.nwb", dataset=SESSION_IDS)
 
 rule prepare_data:
     input:
