@@ -1,48 +1,32 @@
 """Load data, processes it, delete un-needed attributes, save into sample chuncks."""
-import os
 import argparse
-import logging
 import collections
 import datetime
-from pathlib import Path
-from typing import List
+import logging
+import os
 
-import msgpack
 import numpy as np
 import torch
-import yaml
-from tqdm import tqdm
 from allensdk.brain_observatory.ecephys.ecephys_project_cache import EcephysProjectCache
+from tqdm import tqdm
 
-from kirby.data import (
-    Channel,
-    Data,
-    IrregularTimeSeries,
-    Probe,
-    RegularTimeSeries,
-    Interval,
-)
+from kirby.data import Data, Interval, IrregularTimeSeries
 from kirby.tasks.visual_coding import VISUAL_CODING
-from kirby.taxonomy.description_helper import DescriptionHelper
 from kirby.taxonomy import (
     ChunkDescription,
     DandisetDescription,
-    Macaque,
-    Output,
+    DescriptionHelper,
     RecordingTech,
     SessionDescription,
+    Sex,
     SortsetDescription,
     Species,
-    Sex,
     Stimulus,
-    StringIntEnum,
     SubjectDescription,
     Task,
     TrialDescription,
-    to_serializable,
 )
 from kirby.utils import make_directory
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -162,7 +146,7 @@ def extract_trial_metadata(stimulus_pres):
     stimuli_segments = trials
     stimuli_segments.drifting_class = torch.round(trials.orientation / 45.0).long()
     # TODO for now, we will center all timestamps assuming a context window of 1s
-    stimuli_segments.timestamps = torch.ones_like(stimuli_segments.start) * 0.5  
+    stimuli_segments.timestamps = torch.ones_like(stimuli_segments.start) * 0.5
     return trials, stimuli_events, stimuli_segments
 
 
@@ -341,7 +325,7 @@ if __name__ == "__main__":
                 path = os.path.join(processed_folder_path, fold, filename)
 
                 # precompute map from unit name to indices of that unit in data.spikes
-                sample.spikes.precompute_index_map(field='names')
+                sample.spikes.precompute_index_map(field="names")
                 torch.save(sample, path)
 
                 footprints[fold].append(os.path.getsize(path))
@@ -358,7 +342,7 @@ if __name__ == "__main__":
         # Create the metadata for description.yaml
         # Verify which areas are present in this sortset.
         areas = []  # todo
-        
+
         sortset_description = SortsetDescription(
             id=sortset_id,
             subject=animal,
@@ -395,7 +379,6 @@ if __name__ == "__main__":
 
         helper.register_session(sortset_id, session)
         helper.register_sortset(experiment_name, sortset_description)
-
 
     # Create a description file for ease of reference.
     helper.register_dandiset(

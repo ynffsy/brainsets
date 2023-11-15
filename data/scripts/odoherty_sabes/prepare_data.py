@@ -8,10 +8,8 @@ from pathlib import Path
 from typing import List, Tuple
 
 import h5py
-import msgpack
 import numpy as np
 import torch
-import yaml
 from scipy.ndimage import binary_dilation
 from tqdm import tqdm
 
@@ -27,6 +25,7 @@ from kirby.tasks.reaching import REACHING
 from kirby.taxonomy import (
     ChunkDescription,
     DandisetDescription,
+    DescriptionHelper
     Macaque,
     Output,
     RecordingTech,
@@ -38,7 +37,6 @@ from kirby.taxonomy import (
     SubjectDescription,
     Task,
     TrialDescription,
-    to_serializable,
 )
 from kirby.utils import find_files_by_extension, make_directory
 
@@ -93,7 +91,7 @@ def generate_session_description(
         RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
         RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS: "spikes",
         RecordingTech.UTAH_ARRAY_WAVEFORMS: "spikes.waveforms",
-        RecordingTech.UTAH_ARRAY_AVERAGE_WAVEFORMS: "units.average_waveform"
+        RecordingTech.UTAH_ARRAY_AVERAGE_WAVEFORMS: "units.average_waveform",
     }
 
     if broadband:
@@ -257,12 +255,6 @@ def generate_probe_description() -> list[Probe]:
         descriptions.append(description)
 
     return descriptions
-
-
-def encode_datetime(obj):
-    """msgpack doesn't support datetime, so we need to encode it as a string."""
-    if isinstance(obj, datetime.datetime):
-        return obj.strftime("%Y%m%dT%H:%M:%S.%f").encode()
 
 
 def identify_outliers(data, threshold=6000):
@@ -567,7 +559,10 @@ if __name__ == "__main__":
         behavior = extract_behavior(h5file)
 
         # extract session start and end times
-        session_start, session_end = behavior.timestamps[0].item(), behavior.timestamps[-1].item()
+        session_start, session_end = (
+            behavior.timestamps[0].item(),
+            behavior.timestamps[-1].item(),
+        )
 
         # Extract LFPs
         extras = dict()
@@ -681,7 +676,10 @@ if __name__ == "__main__":
             )
 
         session = generate_session_description(
-            f"{experiment_name}_{session_id}", session_end - session_start, recording_date, broadband
+            f"{experiment_name}_{session_id}",
+            session_end - session_start,
+            recording_date,
+            broadband,
         )
 
         trial = TrialDescription(
@@ -715,18 +713,5 @@ if __name__ == "__main__":
     )
 
     # Efficiently encode enums to strings
-    description = to_serializable(description)
-
-    filename = Path(processed_folder_path) / "description.yaml"
-    print(f"Saving description to {filename}")
-
-    with open(filename, "w") as f:
-        yaml.dump(description, f)
-
-    # For efficiency, we also save a msgpack version of the description.
-    # Smaller on disk, faster to read.
-    filename = Path(processed_folder_path) / "description.mpk"
-    print(f"Saving description to {filename}")
-
-    with open(filename, "wb") as f:
-        msgpack.dump(description, f, default=encode_datetime)
+    helper = DescriptionHelper()
+    helper.write_to_disk(Path(processed_folder_path), description)

@@ -1,22 +1,23 @@
-from .taxonomy import (
-    RecordingTech,
-    Task,
-    Stimulus,
-    Output,
-    Species,
-    Sex,
-    DandisetDescription,
-    SubjectDescription,
-    SortsetDescription,
-    SessionDescription,
-    TrialDescription,
-    ChunkDescription,
-    StringIntEnum,
-    Dictable,
-    to_serializable,
-    decoder_registry,
-    DecoderSpec,
-    OutputType
-)
+from .description_helper import DescriptionHelper
 from .macaque import Macaque
+from .taxonomy import (
+    ChunkDescription,
+    DandisetDescription,
+    DecoderSpec,
+    Dictable,
+    Output,
+    OutputType,
+    RecordingTech,
+    SessionDescription,
+    Sex,
+    SortsetDescription,
+    Species,
+    Stimulus,
+    StringIntEnum,
+    SubjectDescription,
+    Task,
+    TrialDescription,
+    decoder_registry,
+    to_serializable,
+)
 from .weight_registry import weight_registry

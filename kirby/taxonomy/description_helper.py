@@ -1,8 +1,8 @@
 import collections
 import datetime
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List
-import warnings
 
 import msgpack
 import yaml
@@ -20,7 +20,15 @@ from kirby.taxonomy.taxonomy import (
 def encode_datetime(obj):
     """msgpack doesn't support datetime, so we need to encode it as a string."""
     if isinstance(obj, datetime.datetime):
-        return obj.strftime("%Y%m%dT%H:%M:%S.%f").encode()
+        return {"__datetime__": True, "as_str": obj.isoformat()}
+    return obj
+
+
+def decode_datetime(obj):
+    """msgpack doesn't support datetime, so we need to encode it as a string."""
+    if "__datetime__" in obj:
+        return datetime.datetime.fromisoformat(obj["as_str"])
+    return obj
 
 
 class DescriptionHelper:
@@ -44,14 +52,10 @@ class DescriptionHelper:
     ):
         self.sessions[sortset_id].append(session_description)
 
-    def register_trial(
-        self, session_id: str, trial_description: TrialDescription
-    ):
+    def register_trial(self, session_id: str, trial_description: TrialDescription):
         self.trials[session_id].append(trial_description)
 
-    def register_chunks(
-        self, trial_id: str, chunks: Dict[str, List[ChunkDescription]]
-    ):
+    def register_chunks(self, trial_id: str, chunks: Dict[str, List[ChunkDescription]]):
         self.chunks[trial_id] = chunks
 
     def finalize(self) -> DandisetDescription:
@@ -101,9 +105,7 @@ class DescriptionHelper:
         with open(filename, "r") as f:
             for i, line in enumerate(f.readlines()):
                 if "!!" in line:
-                    warnings.warn(
-                        f"Found !! in description: at line {i+1}\n\t {line}"
-                    )
+                    warnings.warn(f"Found !! in description: at line {i+1}\n\t {line}")
 
         # For efficiency, we also save a msgpack version of the description.
         # Smaller on disk, faster to read.

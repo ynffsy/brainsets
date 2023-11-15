@@ -6,29 +6,20 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List
 
-import msgpack
 import numpy as np
 import scipy
 import torch
-import yaml
 from scipy.ndimage import binary_dilation, binary_erosion
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from kirby.data import (
-    Channel,
-    Data,
-    Interval,
-    IrregularTimeSeries,
-    Probe,
-    RegularTimeSeries,
-)
+from kirby.data import Data, Interval, IrregularTimeSeries
 from kirby.tasks.reaching import REACHING
 from kirby.taxonomy import (
     ChunkDescription,
     DandisetDescription,
+    DescriptionHelper,
     Macaque,
     Output,
     RecordingTech,
@@ -36,11 +27,9 @@ from kirby.taxonomy import (
     SortsetDescription,
     Species,
     Stimulus,
-    StringIntEnum,
     SubjectDescription,
     Task,
     TrialDescription,
-    to_serializable,
 )
 from kirby.utils import find_files_by_extension, make_directory
 
@@ -557,12 +546,6 @@ def exclude_from_train(buckets, exclude_trials):
     return out
 
 
-def encode_datetime(obj):
-    """msgpack doesn't support datetime, so we need to encode it as a string."""
-    if isinstance(obj, datetime.datetime):
-        return obj.strftime("%Y%m%dT%H:%M:%S.%f").encode()
-
-
 if __name__ == "__main__":
     experiment_name = "perich_miller_population_2018"
 
@@ -825,20 +808,5 @@ if __name__ == "__main__":
         sortsets=sortsets,
     )
 
-    # Efficiently encode enums to strings
-    description = to_serializable(description)
-
-    filename = Path(processed_folder_path) / "description.yaml"
-    print(f"Saving description to {filename}")
-
-    with open(filename, "w") as f:
-        yaml.dump(description, f)
-
-    # For efficiency, we also save a msgpack version of the description.
-    # Smaller on disk, faster to read.
-    filename = Path(processed_folder_path) / "description.mpk"
-    print(f"Saving description to {filename}")
-
-    with open(filename, "wb") as f:
-        msgpack.dump(description, f, default=encode_datetime)
-        
+    helper = DescriptionHelper()
+    helper.write_to_disk(Path(processed_folder_path), description)
