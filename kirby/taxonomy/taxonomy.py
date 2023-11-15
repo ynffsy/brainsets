@@ -79,17 +79,21 @@ class Output(StringIntEnum):
     DRIFTING_GRATINGS = 13
 
 
-
 class Species(StringIntEnum):
     MACACA_MULATTA = 0
-    HOMO_SAPIENS = 1
+    HOMO_SAPIENS = HUMAN = 1
     MUS_MUSCULUS = 2
 
 
 class Sex(StringIntEnum):
-    UNKNOWN = 0
-    MALE = 1
-    FEMALE = 2
+    r"""Follows the DANDI definition of sex.
+    [Link](https://www.dandiarchive.org/handbook/135_validation/#missing-dandi-metadata)
+    """
+    UNKNOWN = U = 0
+    MALE = M = 1
+    FEMALE = F = 2
+    OTHER = O = 3
+
 
 class Dictable:
     """A dataclass that can be converted to a dict."""
