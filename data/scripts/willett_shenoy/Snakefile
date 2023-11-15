@@ -16,8 +16,7 @@ rule all:
 # Rule that downloads the dataset from the internet using wget
 rule download_all:
     output:
-        f"{RAW_DIR}/{DATASET}/handwritingBCIData.tar.gz",
-        f"{RAW_DIR}/{DATASET}/handwritingBCIData/readme.pdf"
+        f"{RAW_DIR}/{DATASET}/handwritingBCIData/Datasets/t5.2019.11.25/singleLetters.mat",
     shell:
         f"""
         mkdir -p {TMP_DIR}/{DATASET}
@@ -28,7 +27,7 @@ rule download_all:
 
 rule prepare_data:
     input:
-        f"{RAW_DIR}/{DATASET}/handwritingBCIData/readme.pdf",
+        f"{RAW_DIR}/{DATASET}/handwritingBCIData/Datasets/t5.2019.11.25/singleLetters.mat",
         py_script = f"data/scripts/{DATASET}/prepare_data.py",
     output:
         f"{PROCESSED_DIR}/{DATASET}/description.yaml"
