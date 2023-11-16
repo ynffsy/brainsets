@@ -11,7 +11,7 @@ url = "https://datadryad.org/api/v2/datasets/doi%3A10.5061%2Fdryad.wh70rxwmv/dow
 
 rule all:
     input:
-        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        f"{PROCESSED_DIR}/{DATASET}/description.mpk"
 
 # Rule that downloads the dataset from the internet using wget
 rule download_all:
@@ -30,7 +30,7 @@ rule prepare_data:
         f"{RAW_DIR}/{DATASET}/handwritingBCIData/Datasets/t5.2019.11.25/singleLetters.mat",
         py_script = f"data/scripts/{DATASET}/prepare_data.py",
     output:
-        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     shell:
         f"""
         mkdir -p {PROCESSED_DIR}/{DATASET}

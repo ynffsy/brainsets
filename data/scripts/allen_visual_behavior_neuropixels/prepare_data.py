@@ -339,7 +339,7 @@ if __name__ == "__main__":
 
         footprints = {k: int(np.mean(v)) for k, v in footprints.items()}
 
-        # Create the metadata for description.yaml
+        # Create the metadata for description.mpk
         # Verify which areas are present in this sortset.
         areas = []  # todo
 

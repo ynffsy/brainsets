@@ -25,7 +25,7 @@ from kirby.tasks.reaching import REACHING
 from kirby.taxonomy import (
     ChunkDescription,
     DandisetDescription,
-    DescriptionHelper
+    DescriptionHelper,
     Macaque,
     Output,
     RecordingTech,

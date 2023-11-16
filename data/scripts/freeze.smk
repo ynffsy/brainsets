@@ -23,7 +23,7 @@ rule freeze:
             pwd
 
             # Multiple shards for webdataset usage.
-            python split_and_tar.py --input_dir {PROCESSED_DIR}/{DATASET}/$split --output_dir {COMPRESSED_DIR}/{DATASET} --prefix $split
+            # python split_and_tar.py --input_dir {PROCESSED_DIR}/{DATASET}/$split --output_dir {COMPRESSED_DIR}/{DATASET} --prefix $split
         done
         cp {{input.description}} {COMPRESSED_DIR}/{DATASET}/description.mpk
         """

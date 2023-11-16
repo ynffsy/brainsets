@@ -24,7 +24,7 @@ ZENODO_IDS = [
 
 rule all:
     input:
-        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        f"{PROCESSED_DIR}/{DATASET}/description.mpk"
 
 rule download_primary_dataset:
     output:
@@ -57,7 +57,7 @@ rule prepare_data:
         mat_files = expand(f"{RAW_DIR}/{DATASET}/{{dataset}}.mat", dataset=BROADBAND_DATASETS),
         nwb_files = expand(f"{RAW_DIR}/{DATASET}/broadband/{{dataset}}.nwb", dataset=BROADBAND_DATASETS)
     output:
-        description = f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        description = f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     shell:
         f"""
         mkdir -p {PROCESSED_DIR}/{DATASET}
