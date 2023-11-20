@@ -132,23 +132,24 @@ def cube_to_long(
         cube_ = cube[b, :, :]
         ts_ = []
         channels_ = []
-        for i in range(1, cube_.max() + 1):
-            ts_.append(ts[cube_ >= i])
-            channels_.append(channels[cube_ >= i])
+
+        # This data is binned, so we create N identifical timestamps when there are N
+        # spikes in a bin.
+        for n in range(1, cube_.max() + 1):
+            ts_.append(ts[cube_ >= n])
+            channels_.append(channels[cube_ >= n])
 
         ts_ = np.concatenate(ts_)
         channels_ = np.concatenate(channels_)
-        channel_names = [f"{channel_prefix}{c}" for c in channels_]
 
         tidx = np.argsort(ts_)
         ts_ = ts_[tidx]
-        channel_names = [channel_names[x] for x in tidx]
-
+        channels_ = channels_[tidx]
 
         trials.append(
             IrregularTimeSeries(
                 timestamps=torch.tensor(ts_),
-                names=channel_names,
+                unit_index=torch.tensor(channels_),
                 types=torch.ones(len(ts_))
                 * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
             )

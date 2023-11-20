@@ -90,6 +90,7 @@ def extract_spikes(mat_dict: dict, prefix: str):
 
     spikes = []
     names = []
+    unit_index = []
     types = []
     waveforms = []
     unit_meta = []
@@ -122,6 +123,7 @@ def extract_spikes(mat_dict: dict, prefix: str):
         spiketimes = units[i][7][0][0][2][0, 0][:, 0]
         spikes.append(spiketimes)
         names.append([unit_name] * len(spiketimes))
+        unit_index.append([i] * len(spiketimes))
         types.append(np.ones_like(spiketimes) * int(RecordingTech.UTAH_ARRAY_SPIKES))
 
         # get waveforms
@@ -150,6 +152,7 @@ def extract_spikes(mat_dict: dict, prefix: str):
 
     spikes = np.concatenate(spikes)
     waveforms = np.concatenate(waveforms)
+    unit_index = np.concatenate(unit_index)
     names = np.concatenate(names)
     types = np.concatenate(types)
 
@@ -167,22 +170,19 @@ def extract_spikes(mat_dict: dict, prefix: str):
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
     waveforms = waveforms[sorted]
+    unit_index = unit_index[sorted]
     names = names[sorted]
     types = types[sorted]
-
-    # Map names back to delta in the current metadata set.
 
     spikes = IrregularTimeSeries(
         timestamps=torch.tensor(spikes),
         waveforms=torch.tensor(waveforms),
         names=names,
+        unit_index=torch.tensor(unit_index),
         types=torch.tensor(types),
     )
 
     units = Data(**unit_meta_long)
-
-    names_to_index = {name: i for i, name in enumerate(units.unit_name)}
-    spikes.unit_index = torch.tensor([names_to_index[name] for name in spikes.names])
 
     return spikes, units, list(areas)
 
@@ -719,8 +719,6 @@ if __name__ == "__main__":
                 filename = f"{basename}.pt"
                 path = os.path.join(processed_folder_path, fold, filename)
 
-                # precompute map from unit name to indices of that unit in data.spikes
-                sample.spikes.precompute_index_map(field="names")
                 torch.save(sample, path)
 
                 footprints[fold].append(os.path.getsize(path))

@@ -1,4 +1,4 @@
-"""Load data, processes it, delete un-needed attributes, save into sample chuncks."""
+"""Load data, processes it, delete un-needed attributes, save into sample chunks."""
 import argparse
 import collections
 import datetime
@@ -396,7 +396,7 @@ def extract_spikes(h5file: h5py.File, prefix: str):
     chan_names = to_ascii(np.array(load_references_2d(h5file, "chan_names")).squeeze())
 
     spikes = []
-    names = []
+    unit_index = []
     types = []
     waveforms = []
     unit_meta = []
@@ -410,6 +410,9 @@ def extract_spikes(h5file: h5py.File, prefix: str):
     # Map from common names to brodmann areas
     bas = {"s1": 3, "m1": 4}
 
+    encountered = set()
+
+    unit_index_delta = 0
     for j in range(len(spikesvec)):
         crossings = spikesvec[j]
         for i in range(len(crossings)):
@@ -421,8 +424,13 @@ def extract_spikes(h5file: h5py.File, prefix: str):
             area, channel_number = chan_names[i].split(" ")
 
             unit_name = f"{prefix}/{chan_names[i]}/{suffixes[j]}"
-            names.append([unit_name] * len(spiketimes))
+
+            unit_index.append([unit_index_delta] * len(spiketimes))
             types.append(np.ones_like(spiketimes, dtype=np.int64) * type_map[j])
+
+            if unit_name in encountered:
+                raise ValueError(f"Duplicate unit name: {unit_name}")
+            encountered.add(unit_name)
 
             wf = np.array(waveformsvec[j][i][:])
             unit_meta.append(
@@ -441,10 +449,11 @@ def extract_spikes(h5file: h5py.File, prefix: str):
                 }
             )
             waveforms.append(wf.T)
+            unit_index_delta += 1
 
     spikes = np.concatenate(spikes)
     waveforms = np.concatenate(waveforms)
-    names = np.concatenate(names)
+    unit_index = np.concatenate(unit_index)
     types = np.concatenate(types)
 
     # Cast to torch tensors
@@ -460,13 +469,13 @@ def extract_spikes(h5file: h5py.File, prefix: str):
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
     waveforms = waveforms[sorted]
-    names = names[sorted]
+    unit_index = unit_index[sorted]
     types = types[sorted]
 
     spikes = IrregularTimeSeries(
         timestamps=torch.tensor(spikes),
         waveforms=torch.tensor(waveforms),
-        names=names,
+        unit_index=torch.tensor(unit_index),
         types=torch.tensor(types),
     )
 
@@ -689,21 +698,29 @@ if __name__ == "__main__":
         )
         session.trials = [trial]
 
-        sortsets[sortset_id].units.append(units.unit_name)
+        # Make sure that the sortsets are consistent with locally stored unit names.
+        if sortsets[sortset_id].units:
+            units_to_add = set(units.unit_name.tolist()).difference(
+                set(sortsets[sortset_id].units)
+            )
+            if units_to_add:
+                logging.info(f"Adding {len(units_to_add)} units to {sortset_id}")
+                for unit in units_to_add:
+                    sortsets[sortset_id].units.append(unit)
+        else:
+            sortsets[sortset_id].units = units.unit_name.tolist()
+
         sortsets[sortset_id].sessions.append(session)
 
         h5file.close()
 
-    # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
     sortsets = sorted(list(sortsets.values()), key=lambda x: x.id)
-    for x in sortsets:
-        x.units = sorted(list(set(np.concatenate(x.units).tolist())))
 
     # Create a description file for ease of reference.
     description = DandisetDescription(
         id="odoherty_sabes_reaching_2017",
         origin_version="583331",  # Zenodo version
-        derived_version="0.0.1",  # This variant
+        derived_version="0.0.2",  # This variant
         metadata_version="0.0.1",
         source="https://zenodo.org/record/583331",
         description="Reaching dataset from O'Doherty et al. (2017), data from M1 and S1.",

@@ -41,7 +41,7 @@ def extract_spikes(units, prefix):
     spiketimes_dict = session.spike_times
 
     spikes = []
-    names = []
+    unit_index = []
     types = []
     # waveforms = []
     unit_meta = []
@@ -54,7 +54,7 @@ def extract_spikes(units, prefix):
 
         spiketimes = spiketimes_dict[unit_id]
         spikes.append(spiketimes)
-        names.append([unit_name] * len(spiketimes))
+        unit_index.append([i] * len(spiketimes))
         types.append(np.ones_like(spiketimes) * int(RecordingTech.NEUROPIXELS_SPIKES))
 
         unit_meta.append(
@@ -73,7 +73,7 @@ def extract_spikes(units, prefix):
 
     spikes = np.concatenate(spikes)
     # waveforms = np.concatenate(waveforms)
-    names = np.concatenate(names)
+    unit_index = np.concatenate(unit_index)
     types = np.concatenate(types)
 
     # Cast to torch tensors
@@ -90,13 +90,13 @@ def extract_spikes(units, prefix):
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
     # waveforms = waveforms[sorted]
-    names = names[sorted]
+    unit_index = unit_index[sorted]
     types = types[sorted]
 
     spikes = IrregularTimeSeries(
         timestamps=torch.tensor(spikes),
         # waveforms=torch.tensor(waveforms),
-        names=names,
+        unit_index=torch.tensor(unit_index),
         types=torch.tensor(types),
     )
 
@@ -323,9 +323,6 @@ if __name__ == "__main__":
                 basename = f"{session_id}_{i:05}"
                 filename = f"{basename}.pt"
                 path = os.path.join(processed_folder_path, fold, filename)
-
-                # precompute map from unit name to indices of that unit in data.spikes
-                sample.spikes.precompute_index_map(field="names")
                 torch.save(sample, path)
 
                 footprints[fold].append(os.path.getsize(path))
