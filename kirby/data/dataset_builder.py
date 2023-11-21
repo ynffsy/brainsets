@@ -245,9 +245,6 @@ class DatasetBuilder:
 
     def finish(self):
         # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
-        for x in self.sortsets:
-            x.units = sorted(list(set(np.concatenate(x.units).tolist())))
-
         description = DandisetDescription(
             id=self.experiment_name,
             origin_version=self.origin_version,
@@ -277,8 +274,6 @@ class DatasetBuilder:
         with open(filename, "wb") as f:
             msgpack.dump(description, f, default=encode_datetime)
 
-        # auto-destruct
-        self.__del__()
 
 
 def encode_datetime(obj):
