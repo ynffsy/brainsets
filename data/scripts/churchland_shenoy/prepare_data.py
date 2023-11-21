@@ -249,7 +249,7 @@ if __name__ == "__main__":
             #### sliding window. this will be updated in the future to make everything 
             #### independent from a small sliding window (the context window should be 
             #### defined in the model config). either way it won't be exposed
-            #### to the user here.
+            #### to the user here. no need to know about chunks or buckets etc...
             # save samples
             db.register_samples_for_training(
                 data, "train", exclude_intervals=[valid_trials, test_trials]
