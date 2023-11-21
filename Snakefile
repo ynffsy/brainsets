@@ -48,6 +48,13 @@ module odoherty_sabes_module:
 use rule * from odoherty_sabes_module as odoherty_sabes_*
 use rule all from odoherty_sabes_module as odoherty_sabes
 
+module churchland_shenoy_module:
+    snakefile: "data/scripts/churchland_shenoy/Snakefile"
+    config: config
+use rule * from churchland_shenoy_module as churchland_shenoy_*
+use rule all from churchland_shenoy_module as churchland_shenoy
+
+
 
 # make rules that combine multiple datasets
 rule poyo_neurips:
