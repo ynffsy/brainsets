@@ -52,6 +52,11 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
         # label unit
         group_name = electrodes["group_name"][i]
         unit_name = f"group_{group_name}/unit_{i}"
+        
+        # extract spikes
+        spiketimes = units[i]
+        timestamps.append(spiketimes)
+        unit_index.append([i] * len(spiketimes))
 
         # extract unit metadata
         unit_meta.append(
@@ -63,11 +68,6 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
             }
         )
 
-        # extract spikes
-        spiketimes = units[i]
-
-        timestamps.append(spiketimes)
-        unit_index.append([i] * len(spiketimes))
 
     # convert unit metadata to a Data object
     # Cast to torch tensors
