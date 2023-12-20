@@ -113,8 +113,7 @@ def extract_behavior(nwbfile, trials):
     return behavior
 
 
-if __name__ == "__main__":
-
+def main():
     #### The following block of code is needs to be copied. best to keep it exposed
     # Use argparse to extract two arguments from the command line:
     # input_dir and output_dir
@@ -169,20 +168,13 @@ if __name__ == "__main__":
             #### and outputs, since the keys are enough to identify the data type. 
             #### additionnaly this will make it easier to work with more models that 
             #### could for example have neural spikes as outputs etc...
-            #### todo 2: having a start_time and end_time here is not necessary, it's not
-            #### even accurate. we can replace with recording_date
             db.register_session(
                 id=session_id,
-                start_time=datetime.datetime.strptime(recording_date, "%Y%m%d"),
-                # todo remove end_time. replace with recording date
-                end_time=datetime.datetime.strptime(recording_date, "%Y%m%d"),
+                recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
                 task=Task.DISCRETE_REACHING,
-                inputs={
+                fields={
                     RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
                     RecordingTech.UTAH_ARRAY_WAVEFORMS: "spikes.waveforms",
-                },
-                stimuli={}, 
-                outputs={
                     Output.CURSOR2D: "behavior.cursor_vel",
                 },
             )
@@ -262,3 +254,9 @@ if __name__ == "__main__":
             )
     #### save everything, always needs to be called at the end of the script
     db.finish()
+
+
+
+
+if __name__ == "__main__":
+    main()
