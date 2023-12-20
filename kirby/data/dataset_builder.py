@@ -64,9 +64,9 @@ class DatasetBuilder:
         self.subjects = []
         self.sortsets = []
 
-    def new_record(self):
-        # initialize the record
-        # each record should have 1 subject, 1 sortset, and 1 session
+    def new_session(self):
+        # initialize the session
+        # each session should have 1 subject and 1 sortset
         self.chunks = collections.defaultdict(list)
         self.footprints = collections.defaultdict(list)
 
@@ -80,10 +80,10 @@ class DatasetBuilder:
 
     def register_subject(self, subject: SubjectDescription = None, **kwargs):
         if self.subject is not None:
-            raise ValueError("A subject was already registered. A record can only have "
+            raise ValueError("A subject was already registered. A session can only have "
                              "one subject.")
 
-        # add subject to the record
+        # add subject to the session
         if subject is None:
             subject = SubjectDescription(**kwargs)
         self.subject = subject
@@ -107,7 +107,7 @@ class DatasetBuilder:
         **kwargs,
     ):
         if self.sortset is not None:
-            raise ValueError("A sortset was already registered. A record can only have "
+            raise ValueError("A sortset was already registered. A session can only have "
                              "one sortset.")
 
         if sortset is None:
@@ -138,8 +138,8 @@ class DatasetBuilder:
 
     def register_session(self, session: SessionDescription = None, *, trials=[], **kwargs):
         if self.session is not None:
-            raise ValueError("A session was already registered. A record can only have "
-                             "one session.")
+            raise ValueError("A session description was already registered. A session "
+                             "can only have one description.")
 
         if session is None:
             session = SessionDescription(trials=trials, **kwargs)

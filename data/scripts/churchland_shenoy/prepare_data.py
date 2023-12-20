@@ -147,7 +147,7 @@ if __name__ == "__main__":
         #### 1 subject, and 1 sortset. In the backend, any linkage is taken care of
         #### no need to understand the connection between everything. 
         #### all data added within the context manager will be linked together
-        with db.new_record():
+        with db.new_session():
             # open file
             io = NWBHDF5IO(file_path, "r")
             nwbfile = io.read()
