@@ -48,4 +48,4 @@ rule prepare_data:
         python data/scripts/{DATASET}/prepare_data.py --input_dir {RAW_DIR}/{DATASET} --output_dir {PROCESSED_DIR}/{DATASET}
         """
 
-# include: "../freeze.smk"
+include: "../freeze.smk"
