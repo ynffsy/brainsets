@@ -57,9 +57,15 @@ class DatasetBuilder:
         # make processed folder if it doesn't exist
         # todo raise warning if it does exist, since some files might be overwritten
         make_directory(self.processed_folder_path, prompt_if_exists=False)
-        make_directory(os.path.join(self.processed_folder_path, "train"), prompt_if_exists=False)
-        make_directory(os.path.join(self.processed_folder_path, "valid"), prompt_if_exists=False)
-        make_directory(os.path.join(self.processed_folder_path, "test"), prompt_if_exists=False)
+        make_directory(
+            os.path.join(self.processed_folder_path, "train"), prompt_if_exists=False
+        )
+        make_directory(
+            os.path.join(self.processed_folder_path, "valid"), prompt_if_exists=False
+        )
+        make_directory(
+            os.path.join(self.processed_folder_path, "test"), prompt_if_exists=False
+        )
 
         self.subjects = []
         self.sortsets = []
@@ -67,32 +73,80 @@ class DatasetBuilder:
     def new_session(self):
         # initialize the session
         # each session should have 1 subject and 1 sortset
+        return SessionContextManager(self)
+
+    def is_subject_already_registered(self, subject_id):
+        # register subject to the dandiset if it hasn't been registered yet
+        return any([subject_id == member.id for member in self.subjects])
+
+    def is_sortset_already_registered(self, sortset_id):
+        # Check if the sortset is already registered
+        return any([sortset_id == member.id for member in self.sortsets])
+
+    def get_sortset(self, sortset_id):
+        return next(
+            (member for member in self.sortsets if member.id == sortset_id), None
+        )
+
+    def finish(self):
+        # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
+        description = DandisetDescription(
+            id=self.experiment_name,
+            origin_version=self.origin_version,
+            derived_version=self.derived_version,
+            metadata_version=self.metadata_version,
+            source=self.source,
+            description=self.description,
+            folds=['train', 'valid', 'test'],
+            subjects=self.subjects,
+            sortsets=self.sortsets,
+        )
+
+        # Efficiently encode enums to strings
+        description = to_serializable(description)
+
+        filename = Path(self.processed_folder_path) / "description.yaml"
+        print(f"Saving description to {filename}")
+
+        with open(filename, "w") as f:
+            yaml.dump(description, f)
+
+        # For efficiency, we also save a msgpack version of the description.
+        # Smaller on disk, faster to read.
+        filename = Path(self.processed_folder_path) / "description.mpk"
+        print(f"Saving description to {filename}")
+
+        with open(filename, "wb") as f:
+            msgpack.dump(description, f, default=encode_datetime)
+
+
+class SessionContextManager:
+    def __init__(self, builder):
+        self.builder = builder
+
         self.chunks = collections.defaultdict(list)
         self.footprints = collections.defaultdict(list)
 
         self.subject = None
         self.sortset = None
         self.session = None
-        return self
 
     def __enter__(self):
         return self
 
     def register_subject(self, subject: SubjectDescription = None, **kwargs):
         if self.subject is not None:
-            raise ValueError("A subject was already registered. A session can only have "
-                             "one subject.")
+            raise ValueError(
+                "A subject was already registered. A session can only have "
+                "one subject."
+            )
 
         # add subject to the session
         if subject is None:
             subject = SubjectDescription(**kwargs)
         self.subject = subject
 
-        # register subject to the dandiset if it hasn't been registered yet
-        if all([subject.id != member.id for member in self.subjects]):
-            self.subjects.append(subject)
-
-        #if sortset was defined before subject, we need to update the reference
+        # if sortset was defined before subject, we need to update the reference
         if self.sortset is not None:
             self.sortset.subject = subject.id
 
@@ -107,8 +161,10 @@ class DatasetBuilder:
         **kwargs,
     ):
         if self.sortset is not None:
-            raise ValueError("A sortset was already registered. A session can only have "
-                             "one sortset.")
+            raise ValueError(
+                "A sortset was already registered. A session can only have "
+                "one sortset."
+            )
 
         if sortset is None:
             sortset = SortsetDescription(
@@ -121,25 +177,26 @@ class DatasetBuilder:
             )
 
         # Check if the sortset is already registered
-        existing_sortset = next(
-            (member for member in self.sortsets if member.id == sortset.id), None
-        )
+        existing_sortset = self.builder.get_sortset(sortset.id)
 
         if existing_sortset is None:
             self.sortset = sortset
-            self.sortsets.append(sortset)
         else:
             # If it exists, update the reference
             self.sortset = existing_sortset
 
-        #if session was defined before sortset, we need to update the reference
+        # if session was defined before sortset, we need to update the reference
         if self.session is not None:
             self.sortset.sessions.append(self.session)
 
-    def register_session(self, session: SessionDescription = None, *, trials=[], **kwargs):
+    def register_session(
+        self, session: SessionDescription = None, *, trials=[], **kwargs
+    ):
         if self.session is not None:
-            raise ValueError("A session description was already registered. A session "
-                             "can only have one description.")
+            raise ValueError(
+                "A session description was already registered. A session "
+                "can only have one description."
+            )
 
         if session is None:
             session = SessionDescription(trials=trials, **kwargs)
@@ -161,7 +218,7 @@ class DatasetBuilder:
 
         else:
             data_list = list(
-                data.bucketize(self.window_size, self.step_size, self.jitter)
+                data.bucketize(self.builder.window_size, self.builder.step_size, self.builder.jitter)
             )
             if exclude_intervals is not None:
                 if isinstance(exclude_intervals, Interval):
@@ -175,7 +232,7 @@ class DatasetBuilder:
         if include_intervals is None:
             return
         data_list = self.slice_along_intervals(
-            data, include_intervals, self.min_duration
+            data, include_intervals, self.builder.min_duration
         )
         self.save_to_disk(data_list, fold)
 
@@ -232,6 +289,14 @@ class DatasetBuilder:
 
         self.footprints = {k: int(np.mean(v)) for k, v in self.footprints.items()}
 
+        # add subject to the dandiset if it hasn't been registered yet
+        if not self.builder.is_subject_already_registered(self.subject.id):
+            self.builder.subjects.append(self.subject)
+
+        # add sortset to the dandiset if it hasn't been registered yet
+        if not self.builder.is_sortset_already_registered(self.sortset.id):
+            self.sortsets.append(self.sortset)
+
         # todo replace trial with epoch
         trial = TrialDescription(
             id=self.session.id,
@@ -242,38 +307,6 @@ class DatasetBuilder:
         self.session.trials = [trial]
 
         return True
-
-    def finish(self):
-        # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
-        description = DandisetDescription(
-            id=self.experiment_name,
-            origin_version=self.origin_version,
-            derived_version=self.derived_version,
-            metadata_version=self.metadata_version,
-            source=self.source,
-            description=self.description,
-            folds=list(self.footprints.keys()),
-            subjects=self.subjects,
-            sortsets=self.sortsets,
-        )
-
-        # Efficiently encode enums to strings
-        description = to_serializable(description)
-
-        filename = Path(self.processed_folder_path) / "description.yaml"
-        print(f"Saving description to {filename}")
-
-        with open(filename, "w") as f:
-            yaml.dump(description, f)
-
-        # For efficiency, we also save a msgpack version of the description.
-        # Smaller on disk, faster to read.
-        filename = Path(self.processed_folder_path) / "description.mpk"
-        print(f"Saving description to {filename}")
-
-        with open(filename, "wb") as f:
-            msgpack.dump(description, f, default=encode_datetime)
-
 
 
 def encode_datetime(obj):

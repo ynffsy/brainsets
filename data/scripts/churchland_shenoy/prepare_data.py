@@ -146,7 +146,7 @@ def main():
         #### 1 subject, and 1 sortset. In the backend, any linkage is taken care of
         #### no need to understand the connection between everything. 
         #### all data added within the context manager will be linked together
-        with db.new_session():
+        with db.new_session() as session:
             # open file
             io = NWBHDF5IO(file_path, "r")
             nwbfile = io.read()
@@ -154,7 +154,7 @@ def main():
             # extract subject metadata
             #### this is a dandiset, which has structured subject metadata
             subject = extract_subject_from_nwb(nwbfile)
-            db.register_subject(subject)
+            session.register_subject(subject)
 
             #### define subject_id, sortset_id and session_id
             # extract experiment metadata
@@ -168,7 +168,7 @@ def main():
             #### and outputs, since the keys are enough to identify the data type. 
             #### additionnaly this will make it easier to work with more models that 
             #### could for example have neural spikes as outputs etc...
-            db.register_session(
+            session.register_session(
                 id=session_id,
                 recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
                 task=Task.DISCRETE_REACHING,
@@ -190,7 +190,7 @@ def main():
             units.unit_name = [f"{sortset_id}_{unit}" for unit in units.unit_name]
             
             # register sortset
-            db.register_sortset(
+            session.register_sortset(
                 id=sortset_id,
                 #### todo: replace unit_name with names
                 units=units.unit_name,
@@ -243,13 +243,13 @@ def main():
             #### defined in the model config). either way it won't be exposed
             #### to the user here. no need to know about chunks or buckets etc...
             # save samples
-            db.register_samples_for_training(
+            session.register_samples_for_training(
                 data, "train", exclude_intervals=[valid_trials, test_trials]
             )
-            db.register_samples_for_evaluation(
+            session.register_samples_for_evaluation(
                 data, "valid", include_intervals=valid_trials
             )
-            db.register_samples_for_evaluation(
+            session.register_samples_for_evaluation(
                 data, "test", include_intervals=test_trials
             )
     #### save everything, always needs to be called at the end of the script
