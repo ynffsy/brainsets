@@ -114,20 +114,18 @@ def extract_behavior(nwbfile, trials):
 
 
 def main():
-    #### The following block of code is needs to be copied. best to keep it exposed
-    # Use argparse to extract two arguments from the command line:
-    # input_dir and output_dir
+    # use argparse to get arguments from the command line
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", type=str, default="./raw")
     parser.add_argument("--output_dir", type=str, default="./processed")
 
     args = parser.parse_args()
 
-    #### It's more natural to start by defining all the metadata for the Dataset
-    # use the dataset builder
+    # intiantiate a DatasetBuilder which provides utilities for processing data
     db = DatasetBuilder(
         raw_folder_path=args.input_dir,
         processed_folder_path=args.output_dir,
+        # metadata for the dataset
         experiment_name="churchland_shenoy_neural_2012",
         origin_version="dandi/000070/draft",
         derived_version="1.0.0",
@@ -137,37 +135,30 @@ def main():
         "while performing reaching tasks with right hand.",
     )
 
-    #### now we iterate over the files and extract the data from each
-    # find all files with extension .nwb in folder_path
+    # iterate over the .nwb files and extract the data from each
     for file_path in find_files_by_extension(db.raw_folder_path, ".nwb"):
         logging.info(f"Processing file: {file_path}")
 
-        #### main addition: a context manager. A record is defined by 1 session, 
-        #### 1 subject, and 1 sortset. In the backend, any linkage is taken care of
-        #### no need to understand the connection between everything. 
-        #### all data added within the context manager will be linked together
+        # each file contains data from one session. a session is unique and has one
+        # associated subject and one associated sortset.
         with db.new_session() as session:
             # open file
             io = NWBHDF5IO(file_path, "r")
             nwbfile = io.read()
 
             # extract subject metadata
-            #### this is a dandiset, which has structured subject metadata
+            # this dataset is from dandi, which has structured subject metadata, so we
+            # can use the helper function extract_subject_from_nwb
             subject = extract_subject_from_nwb(nwbfile)
             session.register_subject(subject)
 
-            #### define subject_id, sortset_id and session_id
             # extract experiment metadata
             recording_date = nwbfile.session_start_time.strftime("%Y%m%d")
             subject_id = subject.id
             sortset_id = f"{subject_id}_{recording_date}"
             session_id = f"{sortset_id}_center_out_reaching"
 
-            #### register session
-            #### todo 1: we do not actually need to differentiate between inputs, stimuli 
-            #### and outputs, since the keys are enough to identify the data type. 
-            #### additionnaly this will make it easier to work with more models that 
-            #### could for example have neural spikes as outputs etc...
+            # register session
             session.register_session(
                 id=session_id,
                 recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
@@ -179,28 +170,21 @@ def main():
                 },
             )
 
-            #### this data is from dandi, should be structured.
             # extract spiking activity
+            # this data is from dandi, we can use our helper function
             spikes, units = extract_spikes_from_nwbfile(
                 nwbfile, recording_tech=RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS
             )
-            #### todo: prefix can be added inside of DatasetBuilder, no need to know 
-            #### about it here
-            # add predix to unit names
-            units.unit_name = [f"{sortset_id}_{unit}" for unit in units.unit_name]
-            
+
             # register sortset
             session.register_sortset(
                 id=sortset_id,
-                #### todo: replace unit_name with names
-                units=units.unit_name,
+                units=units,
             )
 
-            #### this is a user-defined function
             # extract data about trial structure
             trials = extract_trials(nwbfile)
 
-            #### this is a user-defined function
             # extract behavior
             behavior = extract_behavior(nwbfile, trials)
 
@@ -208,7 +192,10 @@ def main():
             io.close()
 
             # register session
-            session_start, session_end = behavior.timestamps[0].item(), behavior.timestamps[-1].item()
+            session_start, session_end = (
+                behavior.timestamps[0].item(),
+                behavior.timestamps[-1].item(),
+            )
 
             data = Data(
                 # metadata
@@ -225,23 +212,11 @@ def main():
                 behavior=behavior,
             )
 
-            #### simple utility to split data
             # split trials into train, validation and test
             train_trials, valid_trials, test_trials = trials[trials.is_valid].split(
                 [0.7, 0.1, 0.2], shuffle=True, random_seed=42
             )
 
-            #### save different samples
-            #### here training samples are all chuncks of data that are not in valid or 
-            #### test trials (if we want to take everything even when no "behavior" is 
-            #### taking place). if we want to only include trials, we would use 
-            #### include_intervals=train_trials. then valid and test samples are simply 
-            #### the trials themselves. Note that register_samples_for_training will, 
-            #### unlike register_samples_for_evaluation, split the data based on a 
-            #### sliding window. this will be updated in the future to make everything 
-            #### independent from a small sliding window (the context window should be 
-            #### defined in the model config). either way it won't be exposed
-            #### to the user here. no need to know about chunks or buckets etc...
             # save samples
             session.register_samples_for_training(
                 data, "train", exclude_intervals=[valid_trials, test_trials]
@@ -252,10 +227,9 @@ def main():
             session.register_samples_for_evaluation(
                 data, "test", include_intervals=test_trials
             )
-    #### save everything, always needs to be called at the end of the script
+
+    # all sessions added, finish by generating a description file for the entire dataset
     db.finish()
-
-
 
 
 if __name__ == "__main__":

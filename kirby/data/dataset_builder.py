@@ -97,7 +97,7 @@ class DatasetBuilder:
             metadata_version=self.metadata_version,
             source=self.source,
             description=self.description,
-            folds=['train', 'valid', 'test'],
+            folds=["train", "valid", "test"],
             subjects=self.subjects,
             sortsets=self.sortsets,
         )
@@ -154,8 +154,9 @@ class SessionContextManager:
         self,
         sortset: SortsetDescription = None,
         *,
+        id=None,
+        units,
         sessions=[],
-        units=[],
         areas=[],
         recording_tech=[],
         **kwargs,
@@ -166,11 +167,19 @@ class SessionContextManager:
                 "one sortset."
             )
 
+        sortset_id = id if id is not None else self.sortset.id
+        # add prefix to unit names
+        units.unit_name = [
+            f"{self.builder.experiment_name}/{sortset_id}/{unit}"
+            for unit in units.unit_name
+        ]
+
         if sortset is None:
             sortset = SortsetDescription(
+                id=id,
                 subject=self.subject.id if self.subject is not None else "",
                 sessions=sessions,
-                units=units,
+                units=units.unit_name,
                 areas=areas,
                 recording_tech=recording_tech,
                 **kwargs,
@@ -218,7 +227,11 @@ class SessionContextManager:
 
         else:
             data_list = list(
-                data.bucketize(self.builder.window_size, self.builder.step_size, self.builder.jitter)
+                data.bucketize(
+                    self.builder.window_size,
+                    self.builder.step_size,
+                    self.builder.jitter,
+                )
             )
             if exclude_intervals is not None:
                 if isinstance(exclude_intervals, Interval):
