@@ -253,7 +253,7 @@ class SessionContextManager:
         for i, sample in enumerate(data_list):
             basename = f"{self.session.id}_{i:05}"
             filename = f"{basename}.pt"
-            path = os.path.join(self.processed_folder_path, fold, filename)
+            path = os.path.join(self.builder.processed_folder_path, fold, filename)
             torch.save(sample, path)
 
             self.footprints[fold].append(os.path.getsize(path))
@@ -308,7 +308,7 @@ class SessionContextManager:
 
         # add sortset to the dandiset if it hasn't been registered yet
         if not self.builder.is_sortset_already_registered(self.sortset.id):
-            self.sortsets.append(self.sortset)
+            self.builder.sortsets.append(self.sortset)
 
         # todo replace trial with epoch
         trial = TrialDescription(

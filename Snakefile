@@ -54,6 +54,11 @@ module churchland_shenoy_module:
 use rule * from churchland_shenoy_module as churchland_shenoy_*
 use rule all from churchland_shenoy_module as churchland_shenoy
 
+module mc_maze_small_module:
+    snakefile: "data/scripts/mc_maze_small/Snakefile"
+    config: config
+use rule * from mc_maze_small_module as mc_maze_small_*
+use rule all from mc_maze_small_module as mc_maze_small
 
 
 # make rules that combine multiple datasets
