@@ -123,9 +123,6 @@ class SessionDescription(Dictable):
     recording_date: datetime.datetime
     task: Task
     fields: Dict[Union[RecordingTech, Stimulus, Output], str]
-    # inputs: Dict[RecordingTech, str]
-    # stimuli: Dict[Stimulus, str]
-    # outputs: Dict[Output, str]
     trials: List[TrialDescription]
     start_time: Optional[datetime.datetime] = None  # todo: deprecate
     end_time: Optional[datetime.datetime] = None  # todo: deprecate

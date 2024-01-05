@@ -13,7 +13,7 @@ COMPRESSED_DIR = config["COMPRESSED_DIR"]
 
 rule all:
     input:
-        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        f"{PROCESSED_DIR}/{DATASET}/description.mpk"
 
 rule download_dataset:
     output:
@@ -29,7 +29,7 @@ rule prepare_data:
         py_script = f"data/scripts/{DATASET}/prepare_data.py",
         nwb_file = f"{RAW_DIR}/{DATASET}/{DANDI_ID}/{FILENAME}"
     output:
-        description = f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        description = f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     shell:
         f"""
         mkdir -p {PROCESSED_DIR}/{DATASET}

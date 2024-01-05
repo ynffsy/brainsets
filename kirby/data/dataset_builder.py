@@ -25,15 +25,15 @@ from kirby.utils import make_directory
 class DatasetBuilder:
     def __init__(
         self,
-        raw_folder_path,
-        processed_folder_path,
+        raw_folder_path: str,
+        processed_folder_path: str,
         *,
-        experiment_name,
-        origin_version,
-        derived_version,
-        metadata_version="0.0.2",
-        source,
-        description,
+        experiment_name: str,
+        origin_version: str,
+        derived_version: str,
+        metadata_version: str = "0.0.2",
+        source: str,
+        description: str,
         min_duration=1.0,
         window_size=1.0,
         stride=0.5,
@@ -102,16 +102,7 @@ class DatasetBuilder:
             sortsets=self.sortsets,
         )
 
-        # Efficiently encode enums to strings
-        description = to_serializable(description)
-
-        filename = Path(self.processed_folder_path) / "description.yaml"
-        print(f"Saving description to {filename}")
-
-        with open(filename, "w") as f:
-            yaml.dump(description, f)
-
-        # For efficiency, we also save a msgpack version of the description.
+        # For efficiency, we save a msgpack version of the description.
         # Smaller on disk, faster to read.
         filename = Path(self.processed_folder_path) / "description.mpk"
         print(f"Saving description to {filename}")

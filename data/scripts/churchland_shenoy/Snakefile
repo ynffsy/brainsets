@@ -23,7 +23,7 @@ DATASETS = [
 
 rule all:
     input:
-        f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        f"{PROCESSED_DIR}/{DATASET}/description.mpk"
         # nwb_files = expand(f"{RAW_DIR}/{DATASET}/{DANDI_ID}/{{dataset}}_behavior+ecephys.nwb", dataset=DATASETS)
         # 
 
@@ -41,7 +41,7 @@ rule prepare_data:
         py_script = f"data/scripts/{DATASET}/prepare_data.py",
         nwb_files = expand(f"{RAW_DIR}/{DATASET}/{DANDI_ID}/{{dataset}}_behavior+ecephys.nwb", dataset=DATASETS)
     output:
-        description = f"{PROCESSED_DIR}/{DATASET}/description.yaml"
+        description = f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     shell:
         f"""
         mkdir -p {PROCESSED_DIR}/{DATASET}
