@@ -102,7 +102,10 @@ class DatasetBuilder:
             sortsets=self.sortsets,
         )
 
-        # For efficiency, we save a msgpack version of the description.
+        # Efficiently encode enums to strings
+        description = to_serializable(description)
+
+        # For efficiency, we also save a msgpack version of the description.
         # Smaller on disk, faster to read.
         filename = Path(self.processed_folder_path) / "description.mpk"
         print(f"Saving description to {filename}")
