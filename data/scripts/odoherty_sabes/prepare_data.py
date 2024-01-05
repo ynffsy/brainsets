@@ -99,13 +99,11 @@ def generate_session_description(
 
     return SessionDescription(
         id=id,
-        start_time=datetime.datetime.strptime(recording_date, "%Y%m%d"),
-        end_time=datetime.datetime.strptime(recording_date, "%Y%m%d")
-        + datetime.timedelta(seconds=duration),
+        recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
         task=Task.CONTINUOUS_REACHING,
-        inputs=inputs,
-        stimuli={Stimulus.TARGET2D: "behavior.target_pos"},
-        outputs={
+        fields={
+            **inputs,
+            Stimulus.TARGET2D: "behavior.target_pos",
             Output.CURSOR2D: "behavior.cursor_pos",
             Output.FINGER3D: "behavior.finger_vel",
             Output.CONTINUOUS_TRIAL_ONSET_OFFSET: "behavior.trial_onset_offset",

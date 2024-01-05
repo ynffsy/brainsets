@@ -756,16 +756,12 @@ if __name__ == "__main__":
 
         session = SessionDescription(
             id=session_id,
-            start_time=datetime.datetime.strptime(recording_date, "%Y%m%d"),
-            end_time=datetime.datetime.strptime(recording_date, "%Y%m%d")
-            + datetime.timedelta(seconds=session_end - session_start),
+            recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
             task=Task.DISCRETE_REACHING,
-            inputs={
+            fields={
                 RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
                 RecordingTech.UTAH_ARRAY_WAVEFORMS: "spikes.waveforms",
-            },
-            stimuli={Stimulus.GO_CUE: "stimuli_events.go_cue"},
-            outputs={
+                Stimulus.GO_CUE: "stimuli_events.go_cue",
                 Output.CURSOR2D: "behavior.cursor_vel",
             },
             trials=[],

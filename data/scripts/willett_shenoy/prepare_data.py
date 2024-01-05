@@ -239,16 +239,14 @@ def process_single_letters(
 
     session = SessionDescription(
         id=session_name,
-        start_time=dateutil.parser.parse(
+        recording_date=dateutil.parser.parse(
             single_letters_data.get("blockStartDates")[0][0].item()
         ),
-        end_time=dateutil.parser.parse(
-            single_letters_data.get("blockStartDates")[-1][-1].item()
-        ),
         task=task,
-        inputs={RecordingTech.UTAH_ARRAY: "spikes"},
-        stimuli={},
-        outputs={output: "stimuli_segments.letters"},
+        fields={
+            RecordingTech.UTAH_ARRAY: "spikes",
+            output: "stimuli_segments.letters",
+            },
         trials=trial_descriptions,
     )
 
