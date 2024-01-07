@@ -353,17 +353,12 @@ if __name__ == "__main__":
 
         session = SessionDescription(
             id=str(session_id),
-            start_time=session.session_start_time,
-            end_time=session.session_start_time
-            + datetime.timedelta(seconds=session_end),
+            recording_date=session.session_start_time,
             task=Task.DISCRETE_VISUAL_CODING,
-            inputs={
+            fields={
                 RecordingTech.NEUROPIXELS_SPIKES: "spikes",
-            },
-            stimuli={
                 Stimulus.DRIFTING_GRATINGS: "stimuli_segments.drifting_class",
             },
-            outputs={},
             trials=[],
         )
 

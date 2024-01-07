@@ -120,13 +120,12 @@ class TrialDescription(Dictable):
 @dataclass
 class SessionDescription(Dictable):
     id: str
-    start_time: datetime.datetime
-    end_time: datetime.datetime
+    recording_date: datetime.datetime
     task: Task
-    inputs: Dict[RecordingTech, str]
-    stimuli: Dict[Stimulus, str]
-    outputs: Dict[Output, str]
+    fields: Dict[Union[RecordingTech, Stimulus, Output], str]
     trials: List[TrialDescription]
+    start_time: Optional[datetime.datetime] = None  # todo: deprecate
+    end_time: Optional[datetime.datetime] = None  # todo: deprecate
 
 
 @dataclass
