@@ -228,6 +228,9 @@ def main():
                 data, "test", include_intervals=test_trials
             )
 
+            # save data to disk
+            session.save_to_disk()
+
     # all sessions added, finish by generating a description file for the entire dataset
     db.finish()
 

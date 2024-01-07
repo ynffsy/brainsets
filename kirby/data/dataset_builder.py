@@ -118,6 +118,7 @@ class SessionContextManager:
     def __init__(self, builder):
         self.builder = builder
 
+        self.data_list = collections.defaultdict(list)
         self.chunks = collections.defaultdict(list)
         self.footprints = collections.defaultdict(list)
 
@@ -212,6 +213,7 @@ class SessionContextManager:
     def register_samples_for_training(
         self, data, fold, include_intervals=None, exclude_intervals=None
     ):
+        assert fold not in self.data_list, f"Fold {fold} already registered."
         assert (
             include_intervals is None or exclude_intervals is None
         ), "Cannot include and exclude intervals at the same time."
@@ -232,32 +234,34 @@ class SessionContextManager:
                     exclude_intervals = [exclude_intervals]
                 for exclude_intervals_set in exclude_intervals:
                     data_list = self.exclude_intervals(data_list, exclude_intervals_set)
-
-        self.save_to_disk(data_list, fold)
+        
+        self.data_list[fold] = data_list
 
     def register_samples_for_evaluation(self, data, fold, include_intervals=None):
+        assert fold not in self.data_list, f"Fold {fold} already registered."
         if include_intervals is None:
             return
         data_list = self.slice_along_intervals(
             data, include_intervals, self.builder.min_duration
         )
-        self.save_to_disk(data_list, fold)
+        self.data_list[fold] = data_list
 
-    def save_to_disk(self, data_list, fold):
-        for i, sample in enumerate(data_list):
-            basename = f"{self.session.id}_{i:05}"
-            filename = f"{basename}.pt"
-            path = os.path.join(self.builder.processed_folder_path, fold, filename)
-            torch.save(sample, path)
+    def save_to_disk(self):
+        for fold, data_list in self.data_list.items():
+            for i, sample in enumerate(data_list):
+                basename = f"{self.session.id}_{i:05}"
+                filename = f"{basename}.pt"
+                path = os.path.join(self.builder.processed_folder_path, fold, filename)
+                torch.save(sample, path)
 
-            self.footprints[fold].append(os.path.getsize(path))
-            self.chunks[fold].append(
-                ChunkDescription(
-                    id=basename,
-                    duration=(sample.end - sample.start).item(),
-                    start_time=sample.start.item(),
+                self.footprints[fold].append(os.path.getsize(path))
+                self.chunks[fold].append(
+                    ChunkDescription(
+                        id=basename,
+                        duration=(sample.end - sample.start).item(),
+                        start_time=sample.start.item(),
+                    )
                 )
-            )
 
     def exclude_intervals(self, data_list, exclude_intervals):
         out = []
