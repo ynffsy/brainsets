@@ -5,6 +5,10 @@ import msgpack
 import os
 from pathlib import Path
 import yaml
+from typing import (
+    List,
+    Union,
+)
 
 import numpy as np
 import torch
@@ -211,7 +215,11 @@ class SessionContextManager:
             self.sortset.sessions.append(session)
 
     def register_samples_for_training(
-        self, data, fold, include_intervals=None, exclude_intervals=None
+        self, 
+        data: Data, 
+        fold: str, 
+        include_intervals: Interval = None, 
+        exclude_intervals: Union[Interval, List[Interval]] = None,
     ):
         assert fold not in self.data_list, f"Fold {fold} already registered."
         assert (
@@ -233,15 +241,19 @@ class SessionContextManager:
                 if isinstance(exclude_intervals, Interval):
                     exclude_intervals = [exclude_intervals]
                 for exclude_intervals_set in exclude_intervals:
-                    data_list = self.exclude_intervals(data_list, exclude_intervals_set)
+                    data_list = self._exclude_intervals(data_list, exclude_intervals_set)
         
         self.data_list[fold] = data_list
 
-    def register_samples_for_evaluation(self, data, fold, include_intervals=None):
+    def register_samples_for_evaluation(
+            self, 
+            data: Data, 
+            fold: str, 
+            include_intervals: Interval = None):
         assert fold not in self.data_list, f"Fold {fold} already registered."
         if include_intervals is None:
             return
-        data_list = self.slice_along_intervals(
+        data_list = self._slice_along_intervals(
             data, include_intervals, self.builder.min_duration
         )
         self.data_list[fold] = data_list
@@ -263,7 +275,7 @@ class SessionContextManager:
                     )
                 )
 
-    def exclude_intervals(self, data_list, exclude_intervals):
+    def _exclude_intervals(self, data_list, exclude_intervals):
         out = []
         for i in range(len(data_list)):
             exclude = False
@@ -277,7 +289,7 @@ class SessionContextManager:
                 out.append(data_list[i])
         return out
 
-    def slice_along_intervals(
+    def _slice_along_intervals(
         self, data: Data, intervals: Interval, min_duration: float
     ):
         data_list = []
