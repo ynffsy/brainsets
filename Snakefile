@@ -48,6 +48,12 @@ module odoherty_sabes_module:
 use rule * from odoherty_sabes_module as odoherty_sabes_*
 use rule all from odoherty_sabes_module as odoherty_sabes
 
+module bouchard_chang_module:
+    snakefile: "data/scripts/bouchard_chang/Snakefile"
+    config: config
+use rule * from bouchard_chang_module as bouchard_chang_*
+use rule all from bouchard_chang_module as bouchard_chang
+
 
 # make rules that combine multiple datasets
 rule poyo_neurips:
