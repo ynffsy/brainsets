@@ -12,6 +12,7 @@ from kirby.taxonomy.macaque import Macaque
 
 from .core import StringIntEnum
 from .writing import Character, Line
+from .speech import Syllable
 
 class RecordingTech(StringIntEnum):
     UTAH_ARRAY_SPIKES = 0
@@ -30,6 +31,9 @@ class RecordingTech(StringIntEnum):
     NEUROPIXELS_ARRAY = 19
 
 
+    ECOG_ARRAY_ECOGS = 29
+
+
 class Task(StringIntEnum):
     # A classic BCI task involving reaching to a 2d target.
     DISCRETE_REACHING = 0
@@ -46,6 +50,9 @@ class Task(StringIntEnum):
 
     # Allen data
     DISCRETE_VISUAL_CODING = 5
+
+    # speech
+    DISCRETE_SPEAKING_SYLLABLE = 6
 
 
 class Stimulus(StringIntEnum):
@@ -77,6 +84,9 @@ class Output(StringIntEnum):
 
     # Allen data
     DRIFTING_GRATINGS = 13
+
+    # speech
+    SPEAKING_SYLLABLE = 14
 
 
 class Species(StringIntEnum):
@@ -254,12 +264,20 @@ decoder_registry = {
                                     value_key="stimuli_segments.letters", 
                                     loss_fn="bce",
                                 ),
-    str(Output.DRIFTING_GRATINGS) : DecoderSpec(dim=8, 
+    str(Output.DRIFTING_GRATINGS) : DecoderSpec(dim=len(Syllable)-1, # Need to decide whether to include empty label
                                     target_dim=1,
                                     target_dtype="long",
                                     type=OutputType.MULTINOMIAL, 
                                     timestamp_key="stimuli_segments.timestamps",
                                     value_key="stimuli_segments.drifting_class", 
+                                    loss_fn="bce",
+                                ),
+    str(Output.SPEAKING_SYLLABLE) : DecoderSpec(dim=8, 
+                                    target_dim=1,
+                                    target_dtype="long",
+                                    type=OutputType.MULTINOMIAL, 
+                                    timestamp_key="speech.timestamps",
+                                    value_key="speech.consonant_vowel_syllables", 
                                     loss_fn="bce",
                                 ),
 }
