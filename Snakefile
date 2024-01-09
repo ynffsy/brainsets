@@ -48,6 +48,18 @@ module odoherty_sabes_module:
 use rule * from odoherty_sabes_module as odoherty_sabes_*
 use rule all from odoherty_sabes_module as odoherty_sabes
 
+module churchland_shenoy_module:
+    snakefile: "data/scripts/churchland_shenoy/Snakefile"
+    config: config
+use rule * from churchland_shenoy_module as churchland_shenoy_*
+use rule all from churchland_shenoy_module as churchland_shenoy
+
+module mc_maze_small_module:
+    snakefile: "data/scripts/mc_maze_small/Snakefile"
+    config: config
+use rule * from mc_maze_small_module as mc_maze_small_*
+use rule all from mc_maze_small_module as mc_maze_small
+
 module bouchard_chang_module:
     snakefile: "data/scripts/bouchard_chang/Snakefile"
     config: config
