@@ -1,6 +1,6 @@
 from enum import IntEnum, auto
 
-class Syllable(IntEnum):
+class CVSyllable(IntEnum):
     empty = 0
     baa   = auto()
     bee   = auto()

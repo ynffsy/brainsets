@@ -14,7 +14,7 @@ import collections
 
 from kirby.data import Data, Interval, IrregularTimeSeries, RegularTimeSeries, Probe, Channel
 from kirby.utils import find_files_by_extension, make_directory
-from kirby.taxonomy.homosapien import HomoSapien
+from kirby.taxonomy.homosapiens import HomoSapiens
 from kirby.taxonomy import speech
 from kirby.taxonomy import (
     ChunkDescription,
@@ -121,9 +121,9 @@ def extract_trials(trials: TimeIntervals, epochs: TimeIntervals, invalid_times: 
     # print(syllable_indice.dtype)
     for i in range(trials.condition.data[:].shape[0]):
         if trials.condition.data[i] == '':
-            syllable_indice[i] = int(speech.Syllable['empty'])
+            syllable_indice[i] = int(speech.CVSyllable['empty'])
         else:
-            syllable_indice[i] = int(speech.Syllable[trials.condition.data[i]])
+            syllable_indice[i] = int(speech.CVSyllable[trials.condition.data[i]])
     assert all(syllable_indice > -1) # there shouldn't be an outlier
     if not (invalid_times == None):
         invalid_start_time = invalid_times.start_time.data[:]
@@ -149,8 +149,10 @@ def extract_trials(trials: TimeIntervals, epochs: TimeIntervals, invalid_times: 
             # flag the time intervals that overlap the invalid time
             if any(np.logical_and(invalid_start_time <= trial_stop_time[i], invalid_stop_time >= trial_start_time[i])):
                 invalid_trial[i] = True  
-            if syllable_indice[i] <= 0:
-                invalid_trial[i] = True # for now skip null syllable
+            # if syllable_indice[i] <= 0:
+            #     invalid_trial[i] = True # for now skip null syllable
+            if syllable_indice[i] < 0:
+                invalid_trial[i] = True # include null syllable
         
     epoch_start_time = epochs.start_time.data[:]
     epoch_stop_time = epochs.stop_time.data[:]
@@ -402,7 +404,7 @@ if __name__ == "__main__":
                 sortset_description = SortsetDescription( #sortset <=> experimental container : the same probe placement => same subject (same task?)
                     id=subject_id,
                     subject=f"{experiment_name}_{subject_id}",
-                    areas=[HomoSapien.ventral_sensorimotor_cortex],
+                    areas=[HomoSapiens.ventral_sensorimotor_cortex],
                     recording_tech=[RecordingTech.ECOG_ARRAY_ECOGS],
                     sessions=[],
                     units=[],

@@ -272,7 +272,7 @@ decoder_registry = {
                                     value_key="stimuli_segments.drifting_class", 
                                     loss_fn="bce",
                                 ),
-    str(Output.SPEAKING_SYLLABLE) : DecoderSpec(dim=len(Syllable)-1, # Need to decide whether to include empty label 
+    str(Output.SPEAKING_SYLLABLE) : DecoderSpec(dim=len(Syllable), # empty label is included 
                                     target_dim=1,
                                     target_dtype="long",
                                     type=OutputType.MULTINOMIAL, 

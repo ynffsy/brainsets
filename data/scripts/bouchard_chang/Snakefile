@@ -17,15 +17,6 @@ SESSION_IDS = [
     "sub-GP31_ses-GP31-B78", "sub-GP31_ses-GP31-B82", "sub-GP31_ses-GP31-B83", "sub-GP33_ses-GP33-B1",
     "sub-GP33_ses-GP33-B5", "sub-GP33_ses-GP33-B30",
 ]
-# SESSION_IDS = [
-#     "sub-EC9_ses-EC9-B15", "sub-EC9_ses-EC9-B39",
-#     "sub-EC9_ses-EC9-B46", "sub-EC9_ses-EC9-B49", "sub-EC9_ses-EC9-B53", "sub-EC9_ses-EC9-B60",
-#     "sub-EC9_ses-EC9-B63", "sub-GP31_ses-GP31-B1", "sub-GP31_ses-GP31-B2", "sub-GP31_ses-GP31-B4",
-#     "sub-GP31_ses-GP31-B6", "sub-GP31_ses-GP31-B9", "sub-GP31_ses-GP31-B21", "sub-GP31_ses-GP31-B63",
-#     "sub-GP31_ses-GP31-B65", "sub-GP31_ses-GP31-B67", "sub-GP31_ses-GP31-B69", "sub-GP31_ses-GP31-B71",
-#     "sub-GP31_ses-GP31-B78", "sub-GP31_ses-GP31-B82", "sub-GP31_ses-GP31-B83", "sub-GP33_ses-GP33-B1",
-#     "sub-GP33_ses-GP33-B5", "sub-GP33_ses-GP33-B30",
-# ]
 
 FOLDER_IDS = [session_str.split('_')[0] for session_str in SESSION_IDS]
 
