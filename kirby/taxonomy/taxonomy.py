@@ -12,7 +12,7 @@ from kirby.taxonomy.macaque import Macaque
 
 from .core import StringIntEnum
 from .writing import Character, Line
-from .speech import Syllable
+from .speech import CVSyllable
 
 class RecordingTech(StringIntEnum):
     UTAH_ARRAY_SPIKES = 0
@@ -52,7 +52,7 @@ class Task(StringIntEnum):
     DISCRETE_VISUAL_CODING = 5
 
     # speech
-    DISCRETE_SPEAKING_SYLLABLE = 6
+    DISCRETE_SPEAKING_CVSYLLABLE = 6
 
 
 class Stimulus(StringIntEnum):
@@ -86,7 +86,7 @@ class Output(StringIntEnum):
     DRIFTING_GRATINGS = 13
 
     # speech
-    SPEAKING_SYLLABLE = 14
+    SPEAKING_CVSYLLABLE = 14
 
 
 class Species(StringIntEnum):
@@ -271,7 +271,7 @@ decoder_registry = {
                                     value_key="stimuli_segments.drifting_class", 
                                     loss_fn="bce",
                                 ),
-    str(Output.SPEAKING_SYLLABLE) : DecoderSpec(dim=len(Syllable), # empty label is included 
+    str(Output.SPEAKING_CVSYLLABLE) : DecoderSpec(dim=len(CVSyllable), # empty label is included 
                                     target_dim=1,
                                     target_dtype="long",
                                     type=OutputType.MULTINOMIAL, 

@@ -11,6 +11,7 @@ from pynwb.epoch import TimeIntervals
 from sklearn.model_selection import train_test_split
 import copy
 import collections
+import datetime
 
 from kirby.data import Data, Interval, IrregularTimeSeries, RegularTimeSeries, Probe, Channel
 from kirby.utils import find_files_by_extension, make_directory
@@ -183,37 +184,52 @@ def extract_trials(trials: TimeIntervals, epochs: TimeIntervals, invalid_times: 
     session_end = max(cv_trials.end[-1], rest_period.end[-1])
     return cv_trials, rest_period, session_start, session_end
 
-def split_and_get_train_valid_test(trials: Interval, valid_split=0.1, test_split=0.2, random_state=42, class_balance=False):
+# adopt the interval.split function then still retrive each split segment ranges
+def split_and_get_train_valid_test(trials: Interval, train_split=0.7, valid_split=0.1, test_split=0.2, random_seed=42, class_balance=False):
     r"""
     Lets conform with other datasets for now: 20% for test and 10% for valid.
     
     Need to properly skip the invalid time segments"""
-    # TODO: class balance
-    assert 0 < valid_split < 1, "valid_split must be positive, got {}".format(valid_split)
-    assert 0 < test_split < 1, "test_split must be positive, got {}".format(test_split)
-    assert 0 < (valid_split + test_split) < 1, "train_split must be positvie, got {}".format(1 - valid_split - test_split)
-    uninvalid_trial_id = [i for i in np.arange(trials.start.size(0)) if trials.invalid[i] == False]
-    train_valid_trial_ids, test_trial_ids = train_test_split(uninvalid_trial_id, test_size=test_split, random_state=random_state)
-    train_trial_ids, valid_trial_ids = train_test_split(train_valid_trial_ids, test_size=valid_split / (1 - test_split), random_state=random_state)
+    # # TODO: class balance
+    # assert 0 < valid_split < 1, "valid_split must be positive, got {}".format(valid_split)
+    # assert 0 < test_split < 1, "test_split must be positive, got {}".format(test_split)
+    # assert 0 < (valid_split + test_split) < 1, "train_split must be positvie, got {}".format(1 - valid_split - test_split)
+    # uninvalid_trial_id = [i for i in np.arange(trials.start.size(0)) if trials.invalid[i] == False]
+    # train_valid_trial_ids, test_trial_ids = train_test_split(uninvalid_trial_id, test_size=test_split, random_state=random_state)
+    # train_trial_ids, valid_trial_ids = train_test_split(train_valid_trial_ids, test_size=valid_split / (1 - test_split), random_state=random_state)
+
+    # train_segments = [(trials.start[i], trials.end[i]) for i in train_trial_ids]
+    # valid_segments = [(trials.start[i], trials.end[i]) for i in valid_trial_ids]
+    # test_segments = [(trials.start[i], trials.end[i]) for i in test_trial_ids]
     
-    # return train_trial_ids, valid_trial_ids, test_trial_ids
+    if class_balance:
+        raise NotImplementedError()
+    else:
+        # each result is splitted trials (one interval objects)
+        # print(trials)
+        # print(trials.invalid)
+        train_trials, valid_trials, test_trials = trials[~trials.invalid].split(
+                [train_split, valid_split, test_split], shuffle=True, random_seed=random_seed
+    )
     
-    train_segments = [(trials.start[i], trials.end[i]) for i in train_trial_ids]
-    valid_segments = [(trials.start[i], trials.end[i]) for i in valid_trial_ids]
-    test_segments = [(trials.start[i], trials.end[i]) for i in test_trial_ids]
+    # get time segment ranges for slicing
+    train_segments = [(train_trials.start[i], train_trials.end[i]) for i in range(train_trials.start.size(0))] # TODO
+    valid_segments = [(valid_trials.start[i], valid_trials.end[i]) for i in range(valid_trials.start.size(0))]
+    test_segments = [(test_trials.start[i], test_trials.end[i]) for i in range(test_trials.start.size(0))]
 
     return train_segments, valid_segments, test_segments
 
 def collect_slices_wChecks(data, segments):
+    # include the functionality to handle overlapping time in trials, by picking the most time matched one
     slices = []
     slice_labels = []
     cnt_nospeak = 0
     for start, end in segments:
         data_slice = data.slice(start, end)
         # print(data_slice)
-        assert ((end - start) - (data_slice.ecog.timestamps[-1] - data_slice.ecog.timestamps[0])) <= 2/SAMPLE_FREQUENCY
+        assert abs((end - start) - (data_slice.ecog.timestamps[-1] - data_slice.ecog.timestamps[0])) <= 2/SAMPLE_FREQUENCY, 'sliced time range too far from expected'
         # print(start, end, data_slice.speech.end - data_slice.speech.start)
-        if len(data_slice.speech) > 1: # rarely there is overlapping in the trial
+        if len(data_slice.speech) > 1: # rarely there is overlapping in the trial, when there is, take the longest one
             multiple_speech_trial = copy.deepcopy(data_slice.speech)
             idx_to_take = len(multiple_speech_trial)
             for i in range(len(multiple_speech_trial)):
@@ -222,7 +238,7 @@ def collect_slices_wChecks(data, segments):
                     idx_to_take = i
             assert not (idx_to_take == len(multiple_speech_trial)), 'there is something wrong during slicing'
             data_slice.speech = multiple_speech_trial[i:i+1]
-            # print(start, end, data_slice.speech.end - data_slice.speech.start)
+            print(start, end, data_slice.speech.end - data_slice.speech.start)
         slices.append(data_slice) # note that slice shift start to 0
         assert len(slices[-1].speech) == 1 # each segment now should contain only one consonant-vowel pair 
         assert not torch.any(slices[-1].speech.invalid)
@@ -331,7 +347,7 @@ if __name__ == "__main__":
                 train_segments,
                 valid_segments,
                 test_segments,
-            ) = split_and_get_train_valid_test(cv_trials, valid_split=0.1, test_split=0.2)
+            ) = split_and_get_train_valid_test(cv_trials, train_split=0.7, valid_split=0.1, test_split=0.2)
 
             # collect data slices for validation and test segments
             train_slices, train_slice_labels = collect_slices_wChecks(data, train_segments)
@@ -389,14 +405,15 @@ if __name__ == "__main__":
             # footprints = {k: int(np.mean(v)) for k, v in footprints.items()}
 
             # create description.yml
+            recording_date = nwb_file.session_start_time.strftime("%Y%m%d")
             session = SessionDescription(
                 id=session_id,
-                start_time=session_start,
-                end_time=session_end,
-                task=Task.DISCRETE_SPEAKING_SYLLABLE,
-                inputs={RecordingTech.ECOG_ARRAY_ECOGS: "ecog.waveforms"},
-                stimuli={},
-                outputs={Output.SPEAKING_SYLLABLE: "speech.consonant_vowel_syllables"},
+                recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
+                task=Task.DISCRETE_SPEAKING_CVSYLLABLE,
+                fields={
+                    RecordingTech.ECOG_ARRAY_ECOGS: "ecog.waveforms",
+                    Output.SPEAKING_CVSYLLABLE: "speech.consonant_vowel_syllables",
+                },
                 trials=trial_descriptions,
             )
             
