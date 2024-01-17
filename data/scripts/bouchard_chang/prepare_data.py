@@ -80,31 +80,36 @@ def extract_electrode_descriptions(nwb_file: NWBFile):
     # human vSMC: ventral sensorimotor cortex
     return probe_descriptions
 
-def extract_ecog(ecog_signals: ElectricalSeries):
+def extract_ecog(ecog_signals: ElectricalSeries, channel_prefix='channel_'):
     data_points = ecog_signals.data.shape[0]
     num_channels = ecog_signals.data.shape[1]
     step = 1./SAMPLE_FREQUENCY
     end = data_points / SAMPLE_FREQUENCY
     timestamps = torch.arange(ecog_signals.starting_time, end, step, dtype=torch.float)[:data_points]
-    # assert timestamps.size(0) == data_points, f"{timestamps.size(0)} and {data_points} not the same"
-    # ecog = IrregularTimeSeries(timestamps=timestamps, 
-    #                            waveforms=torch.tensor(ecog_signals.data[:], dtype=torch.float),
-    # )
+
     # TODO should be regular?
     ecog = RegularTimeSeries(timestamps=timestamps, 
                              waveforms=torch.tensor(ecog_signals.data[:]),
     )
-                            #    sampling_frequency=SAMPLE_FREQUENCY,
-                            #    num_channels=num_channels,
-                            #    units=str(ecog_signals.unit),
-                            #    conversion=float(ecog_signals.conversion))
+
     extra = {'bad_channels':torch.tensor(ecog_signals.electrodes.table.bad.data[:], dtype=torch.bool),
              'sampling_frequency':SAMPLE_FREQUENCY,
              'num_channels':num_channels,
-             'units':str(ecog_signals.unit),
+             'timestamp_unit':str(ecog_signals.unit),
              'conversion':float(ecog_signals.conversion)}
     assert ecog.sorted
-    return ecog, extra
+
+    channels = Data(
+        channel_name=[f"{channel_prefix}{c:03}" for c in range(num_channels)],
+        unit_name=[f"{channel_prefix}{c}" for c in range(num_channels)],
+        channel_index=torch.arange(num_channels),
+        type=torch.ones(num_channels) * int(RecordingTech.ECOG_ARRAY_ECOGS),
+    )
+
+    # name_to_index = {k: v for v, k in enumerate(channels.unit_name)}
+    ecog.unit_index = torch.arange(num_channels).to(dtype=torch.long)
+
+    return ecog, extra, channels
 
 def check_sorted(arr: np.array):
     assert len(arr.shape) == 1
@@ -167,6 +172,8 @@ def extract_trials(trials: TimeIntervals, epochs: TimeIntervals, invalid_times: 
                 invalid_epoch[i] = True  
     # print(syllable_indice)
     # print(type(syllable_indice), syllable_indice.dtype)
+
+    # slicing will by default shift the start & end by start, so adding the timestamps as middle point afterwards
     cv_trials = Interval(
         start=torch.tensor(trial_start_time), 
         end=torch.tensor(trial_stop_time), 
@@ -174,6 +181,7 @@ def extract_trials(trials: TimeIntervals, epochs: TimeIntervals, invalid_times: 
         cv_transition_time=torch.tensor(trials.cv_transition_time.data[:]),
         speak=torch.tensor(trials.speak.data[:], dtype=torch.bool),
         invalid=invalid_trial,
+
     )
     rest_period = Interval(
         start=torch.tensor(epoch_start_time), 
@@ -237,10 +245,15 @@ def collect_slices_wChecks(data, segments):
                 if (multiple_speech_trial[i].end - multiple_speech_trial[i].start) == (end - start): # find the one trial with the exact interval range
                     idx_to_take = i
             assert not (idx_to_take == len(multiple_speech_trial)), 'there is something wrong during slicing'
-            data_slice.speech = multiple_speech_trial[i:i+1]
+            data_slice.speech = multiple_speech_trial[idx_to_take:(idx_to_take+1)]
             print(start, end, data_slice.speech.end - data_slice.speech.start)
+        
+        # use the middle point as the timestamps
+        data_slice.speech.timestamps = (data_slice.speech.end - data_slice.speech.start) / 2
+        assert torch.all(data_slice.speech.timestamps == (data_slice.end - data_slice.start) / 2)
+
         slices.append(data_slice) # note that slice shift start to 0
-        assert len(slices[-1].speech) == 1 # each segment now should contain only one consonant-vowel pair 
+        assert len(slices[-1].speech) == 1 # each segment now should contain only one consonant-voswel pair 
         assert not torch.any(slices[-1].speech.invalid)
         cnt_nospeak += torch.sum(slices[-1].speech.speak == False)
         slice_labels.append(slices[-1].speech.consonant_vowel_syllables.item())
@@ -314,7 +327,7 @@ if __name__ == "__main__":
             # TODO various extracting func
             # print('extract ecog signals')
             logging.debug('extract ecog signals')
-            ecog_multichan, extra = extract_ecog(ecog)
+            ecog_multichan, extra, channels = extract_ecog(ecog, channel_prefix=f"channel_{subject_id}_")
             file_bad_channels = torch.sum(extra['bad_channels'] == True).item()
             if file_bad_channels > 0:
                 logging.info(f"{file_bad_channels} bad channels in session file {file_path}")
@@ -328,6 +341,7 @@ if __name__ == "__main__":
 
             data = Data(
                 ecog=ecog_multichan,
+                units=channels,
                 speech=cv_trials,
                 rest_period=rest_period,
                 start=session_start,
@@ -406,7 +420,7 @@ if __name__ == "__main__":
 
             # create description.yml
             recording_date = nwb_file.session_start_time.strftime("%Y%m%d")
-            session = SessionDescription(
+            session = SessionDescription( # there is still start_time & end_time variable but as null
                 id=session_id,
                 recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
                 task=Task.DISCRETE_SPEAKING_CVSYLLABLE,
@@ -417,6 +431,8 @@ if __name__ == "__main__":
                 trials=trial_descriptions,
             )
             
+            # each subject has a sortset / use channel names as the units variables, 
+            # TODO we might want more intuitive naming?
             if not subject_id in sortsets:
                 sortset_description = SortsetDescription( #sortset <=> experimental container : the same probe placement => same subject (same task?)
                     id=subject_id,
@@ -424,17 +440,22 @@ if __name__ == "__main__":
                     areas=[HomoSapiens.ventral_sensorimotor_cortex],
                     recording_tech=[RecordingTech.ECOG_ARRAY_ECOGS],
                     sessions=[],
-                    units=[],
+                    units=channels.unit_name,
                 )
                 sortsets[subject_id] = sortset_description
-
+            
             sortsets[subject_id].sessions.append(session)
+
+            # for the same subjects, channel names should be the same
+            assert torch.all(torch.tensor([channels.unit_name[i] == sortsets[subject_id].units[i] for i in range(len(sortsets[subject_id].units))]))
 
             # helper.register_session(sortset_name, session) # This in fact register session description to one sortset
             # helper.register_sortset(experiment_name, sortset_description)
     
+    # sortsets = sorted(list(sortsets.values()), key=lambda x: x.id)
     sortsets = sorted(list(sortsets.values()), key=lambda x: x.id)
-    helper.register_sortset(experiment_name, sortsets)
+    for per_subject_sortset in sortsets:
+        helper.register_sortset(experiment_name, per_subject_sortset)
 
     # Create a description file for ease of reference.
     helper.register_dandiset(
