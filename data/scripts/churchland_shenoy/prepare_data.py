@@ -165,7 +165,6 @@ def main():
                 task=Task.DISCRETE_REACHING,
                 fields={
                     RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS: "spikes",
-                    RecordingTech.UTAH_ARRAY_WAVEFORMS: "spikes.waveforms",
                     Output.CURSOR2D: "behavior.cursor_vel",
                 },
             )
@@ -201,9 +200,9 @@ def main():
                 # metadata
                 start=session_start,
                 end=session_end,
-                session=f"{db.experiment_name}_{session_id}",
-                sortset=f"{db.experiment_name}_{sortset_id}",
-                subject=f"{db.experiment_name}_{subject_id}",
+                session=session_id,
+                sortset=sortset_id,
+                subject=subject_id,
                 # neural activity
                 spikes=spikes,
                 units=units,
