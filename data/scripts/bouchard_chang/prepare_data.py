@@ -349,9 +349,9 @@ if __name__ == "__main__":
                 probes=probe,
                 # These are all the string metadata that we have. Later, we'll use this for
                 # keying into EmbeddingWithVocab embeddings.
-                session=f"{experiment_name}_{session_id}",
-                sortset=f"{experiment_name}_{subject_id}",
-                subject=f"{experiment_name}_{subject_id}",
+                session=f"{session_id}",
+                sortset=f"{subject_id}",
+                subject=f"{subject_id}",
                 **extra,
             )
             
