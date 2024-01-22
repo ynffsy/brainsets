@@ -60,6 +60,12 @@ module mc_maze_small_module:
 use rule * from mc_maze_small_module as mc_maze_small_*
 use rule all from mc_maze_small_module as mc_maze_small
 
+module bouchard_chang_module:
+    snakefile: "data/scripts/bouchard_chang/Snakefile"
+    config: config
+use rule * from bouchard_chang_module as bouchard_chang_*
+use rule all from bouchard_chang_module as bouchard_chang
+
 
 # make rules that combine multiple datasets
 rule poyo_neurips:
