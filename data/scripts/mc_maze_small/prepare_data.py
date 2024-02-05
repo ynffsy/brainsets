@@ -39,11 +39,11 @@ def extract_trials(nwbfile):
 
     # the dataset has pre-defined train/valid splits, we will use the valid split
     # as our test
-    train_mask = trial_table.split.to_numpy() == "train"
-    test_mask = trial_table.split.to_numpy() == "val"
+    train_mask_nwb = trial_table.split.to_numpy() == "train"
+    test_mask_nwb = trial_table.split.to_numpy() == "val"
 
-    trials.train_mask = train_mask
-    trials.test_mask = test_mask
+    trials.train_mask_nwb = train_mask_nwb # Naming with "_" since train_mask is reserved 
+    trials.test_mask_nwb = test_mask_nwb # Naming with "_" since test_mask is reserved
 
     return trials
 
@@ -67,6 +67,7 @@ def extract_behavior(nwbfile, trials):
 
     # create a behavior type segmentation mask
     behavior_type = np.ones_like(timestamps, dtype=np.int64) * REACHING.RANDOM
+
     # report accuracy only on the evaluation intervals
     eval_mask = np.zeros_like(timestamps, dtype=bool)
 
@@ -202,22 +203,17 @@ def main():
                 behavior=behavior,
             )
 
-            # split trials into train, validation and test
-            train_trials, valid_trials = trials[trials.train_mask].split(
+            session.register_data(data)
+
+            # split and register trials into train, validation and test
+            train_trials, valid_trials = trials[trials.train_mask_nwb].split(
                 [0.8, 0.2], shuffle=True, random_seed=42
             )
-            test_trials = trials[trials.test_mask]
+            test_trials = trials[trials.test_mask_nwb]
 
-            # save samples
-            session.register_samples_for_training(
-                data, "train", exclude_intervals=[valid_trials, test_trials]
-            )
-            session.register_samples_for_evaluation(
-                data, "valid", include_intervals=valid_trials
-            )
-            session.register_samples_for_evaluation(
-                data, "test", include_intervals=test_trials
-            )  
+            session.register_split("train", train_trials)
+            session.register_split("valid", valid_trials)
+            session.register_split("test", test_trials)
 
             # save data to disk
             session.save_to_disk()

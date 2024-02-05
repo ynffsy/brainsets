@@ -1,4 +1,3 @@
-import collections
 import datetime
 import logging
 import msgpack
@@ -7,23 +6,23 @@ from pathlib import Path
 import yaml
 from typing import (
     List,
+    Optional,
     Union,
+    Tuple,
 )
 
+import h5py
 import numpy as np
-import torch
 
-from kirby.data import Data, Interval
 from kirby.taxonomy import (
-    ChunkDescription,
     DandisetDescription,
     SessionDescription,
     SortsetDescription,
     SubjectDescription,
-    TrialDescription,
     to_serializable,
 )
 from kirby.utils import make_directory
+from kirby.data import Interval, IrregularTimeSeries
 
 
 class DatasetBuilder:
@@ -38,10 +37,6 @@ class DatasetBuilder:
         metadata_version: str = "0.0.2",
         source: str,
         description: str,
-        min_duration=1.0,
-        window_size=1.0,
-        stride=0.5,
-        jitter=0.25,
     ):
         self.raw_folder_path = raw_folder_path
         self.processed_folder_path = processed_folder_path
@@ -53,23 +48,9 @@ class DatasetBuilder:
         self.source = source
         self.description = description
 
-        self.min_duration = min_duration
-        self.window_size = window_size
-        self.step_size = stride
-        self.jitter = jitter
-
         # make processed folder if it doesn't exist
         # todo raise warning if it does exist, since some files might be overwritten
         make_directory(self.processed_folder_path, prompt_if_exists=False)
-        make_directory(
-            os.path.join(self.processed_folder_path, "train"), prompt_if_exists=False
-        )
-        make_directory(
-            os.path.join(self.processed_folder_path, "valid"), prompt_if_exists=False
-        )
-        make_directory(
-            os.path.join(self.processed_folder_path, "test"), prompt_if_exists=False
-        )
 
         self.subjects = []
         self.sortsets = []
@@ -92,6 +73,15 @@ class DatasetBuilder:
             (member for member in self.sortsets if member.id == sortset_id), None
         )
 
+    def get_all_splits(self):
+        """Return a list of all splits in the dataset"""
+        splits = set()
+        for sortset in self.sortsets:
+            for session in sortset.sessions:
+                for split in session.splits.keys():
+                    splits.add(split)
+        return list(splits)
+
     def finish(self):
         # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
         description = DandisetDescription(
@@ -101,7 +91,7 @@ class DatasetBuilder:
             metadata_version=self.metadata_version,
             source=self.source,
             description=self.description,
-            folds=["train", "valid", "test"],
+            splits=self.get_all_splits(),
             subjects=self.subjects,
             sortsets=self.sortsets,
         )
@@ -122,13 +112,10 @@ class SessionContextManager:
     def __init__(self, builder):
         self.builder = builder
 
-        self.data_list = collections.defaultdict(list)
-        self.chunks = collections.defaultdict(list)
-        self.footprints = collections.defaultdict(list)
-
         self.subject = None
         self.sortset = None
         self.session = None
+        self.data = None
 
     def __enter__(self):
         return self
@@ -214,92 +201,74 @@ class SessionContextManager:
         if self.sortset is not None:
             self.sortset.sessions.append(session)
 
-    def register_samples_for_training(
-        self, 
-        data: Data, 
-        fold: str, 
-        include_intervals: Interval = None, 
-        exclude_intervals: Union[Interval, List[Interval]] = None,
-    ):
-        assert fold not in self.data_list, f"Fold {fold} already registered."
-        assert (
-            include_intervals is None or exclude_intervals is None
-        ), "Cannot include and exclude intervals at the same time."
-
-        if include_intervals is not None:
-            raise NotImplementedError("Include intervals not implemented yet.")
-
-        else:
-            data_list = list(
-                data.bucketize(
-                    self.builder.window_size,
-                    self.builder.step_size,
-                    self.builder.jitter,
-                )
-            )
-            if exclude_intervals is not None:
-                if isinstance(exclude_intervals, Interval):
-                    exclude_intervals = [exclude_intervals]
-                for exclude_intervals_set in exclude_intervals:
-                    data_list = self._exclude_intervals(data_list, exclude_intervals_set)
-        
-        self.data_list[fold] = data_list
-
-    def register_samples_for_evaluation(
-            self, 
-            data: Data, 
-            fold: str, 
-            include_intervals: Interval = None):
-        assert fold not in self.data_list, f"Fold {fold} already registered."
-        if include_intervals is None:
-            return
-        data_list = self._slice_along_intervals(
-            data, include_intervals, self.builder.min_duration
+    def register_data(self, data):
+        self.data = data
+        self.register_split(
+            "full", 
+            Interval(start=np.array([data.start]), end=np.array([data.end]))
         )
-        self.data_list[fold] = data_list
+
+    def register_split(
+        self,
+        name: str,
+        interval: Interval,
+    ):
+        """
+        Args:
+            name: name of the split
+            interval: Interval object representing the split
+        """
+        if self.session.splits is None:
+            self.session.splits = {}
+
+        if name in self.session.splits:
+            raise ValueError(f"Split {name} already exists for this session")
+
+        # Can only handle Interval or list of tuples as split
+        if not isinstance(interval, Interval):
+            raise TypeError(f"Cannot handle interval type {type(interval)}")
+
+        self.session.splits[name] = list(zip(interval.start, interval.end))
+        self.data.add_split_mask(name, interval)
+
+    def check_no_mask_overlap(self):
+        """Performs a check on all split masks inside the data object to ensure
+        there is no overlap across splits. Raises an error if there is overlap"""
+        mask_names = [f"{x}_mask" for x in self.session.splits.keys() if x != "full"]
+        for obj_key in self.data.keys:
+            obj = getattr(self.data, obj_key)
+            if isinstance(obj, (Interval, IrregularTimeSeries)):
+                if isinstance(obj, Interval):
+                    if obj._allow_split_mask_overlap:
+                        continue
+
+                mask_sum = np.zeros(len(obj))
+                for mask_name in mask_names:
+                    mask = getattr(obj, mask_name)
+                    mask_sum += mask.astype(int)
+                if np.any(mask_sum > 1):
+                    if isinstance(obj, Interval):
+                        raise ValueError(
+                            f"Split mask overlap detected in {obj_key}. "
+                            f"If you would like to allow overlap in this Interval "
+                            f"object, call <object>.allow_split_mask_overlap() before "
+                            f"saving session to disk."
+                        )
+                    else:
+                        raise ValueError(
+                            f"Split mask overlap detected in {obj_key}."
+                        )
 
     def save_to_disk(self):
-        for fold, data_list in self.data_list.items():
-            for i, sample in enumerate(data_list):
-                basename = f"{self.session.id}_{i:05}"
-                filename = f"{basename}.pt"
-                path = os.path.join(self.builder.processed_folder_path, fold, filename)
-                torch.save(sample, path)
+        assert self.subject is not None, "A subject must be registered."
+        assert self.sortset is not None, "A sortset must be registered."
+        assert self.session is not None, "A session must be registered."
+        self.check_no_mask_overlap()
 
-                self.footprints[fold].append(os.path.getsize(path))
-                self.chunks[fold].append(
-                    ChunkDescription(
-                        id=basename,
-                        duration=(sample.end - sample.start).item(),
-                        start_time=sample.start.item(),
-                    )
-                )
+        path = os.path.join(self.builder.processed_folder_path, f"{self.session.id}.h5")
 
-    def _exclude_intervals(self, data_list, exclude_intervals):
-        out = []
-        for i in range(len(data_list)):
-            exclude = False
-            bucket_start, bucket_end = data_list[i].start, data_list[i].end
-            for interval in exclude_intervals:
-                start, end = interval.start, interval.end
-                if start <= bucket_end and end >= bucket_start:
-                    exclude = True
-                    break
-            if not exclude:
-                out.append(data_list[i])
-        return out
-
-    def _slice_along_intervals(
-        self, data: Data, intervals: Interval, min_duration: float
-    ):
-        data_list = []
-        for interval in intervals:
-            start, end = interval.start, interval.end
-            if end - start <= min_duration:
-                start = start - (min_duration - (end - start)) / 2
-                end = start + min_duration
-            data_list.append(data.slice(start, end))
-        return data_list
+        with h5py.File(path, "w") as file:
+            self.data.to_hdf5(file)
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
@@ -310,8 +279,6 @@ class SessionContextManager:
         assert self.sortset is not None, "A sortset must be registered."
         assert self.session is not None, "A session must be registered."
 
-        self.footprints = {k: int(np.mean(v)) for k, v in self.footprints.items()}
-
         # add subject to the dandiset if it hasn't been registered yet
         if not self.builder.is_subject_already_registered(self.subject.id):
             self.builder.subjects.append(self.subject)
@@ -319,15 +286,6 @@ class SessionContextManager:
         # add sortset to the dandiset if it hasn't been registered yet
         if not self.builder.is_sortset_already_registered(self.sortset.id):
             self.builder.sortsets.append(self.sortset)
-
-        # todo replace trial with epoch
-        trial = TrialDescription(
-            id=self.session.id,
-            footprints=self.footprints,
-            chunks=self.chunks,
-        )
-
-        self.session.trials = [trial]
 
         return True
 

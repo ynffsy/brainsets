@@ -2,7 +2,7 @@ import collections
 import dataclasses
 import datetime
 from dataclasses import asdict
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Tuple, Optional, Union, Any
 import numpy as np
 
 from pydantic.dataclasses import dataclass
@@ -134,6 +134,7 @@ class SessionDescription(Dictable):
     task: Task
     fields: Dict[Union[RecordingTech, Stimulus, Output], str]
     trials: List[TrialDescription]
+    splits: Optional[Dict[str, List[Tuple[float, float]]]] = None
     start_time: Optional[datetime.datetime] = None  # todo: deprecate
     end_time: Optional[datetime.datetime] = None  # todo: deprecate
 
@@ -165,7 +166,7 @@ class DandisetDescription(Dictable):
     metadata_version: str
     source: str
     description: str
-    folds: List[str]
+    splits: List[str]
     subjects: List[SubjectDescription]
     sortsets: List[SortsetDescription]
 
@@ -173,7 +174,7 @@ class DandisetDescription(Dictable):
 def to_serializable(dct):
     """Recursively map data structure elements to string when they are of type
     StringIntEnum"""
-    if isinstance(dct, list):
+    if isinstance(dct, list) or isinstance(dct, tuple):
         return [to_serializable(x) for x in dct]
     elif isinstance(dct, dict) or isinstance(dct, collections.defaultdict):
         return {
