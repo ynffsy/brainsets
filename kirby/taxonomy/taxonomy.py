@@ -67,20 +67,21 @@ class Stimulus(StringIntEnum):
 
 
 class Output(StringIntEnum):
+    NA = 0
     # Classic BCI outputs.
-    ARMVELOCITY2D = 0
-    CURSOR2D = 1
-    EYE2D = 2
-    FINGER3D = 3
+    ARMVELOCITY2D = 1
+    CURSOR2D = 2
+    EYE2D = 3
+    FINGER3D = 4
 
     # Shenoy handwriting style outputs.
-    WRITING_CHARACTER = 4
-    WRITING_LINE = 5
+    WRITING_CHARACTER = 5
+    WRITING_LINE = 6
 
-    DISCRETE_TRIAL_ONSET_OFFSET = 10
-    CONTINUOUS_TRIAL_ONSET_OFFSET = 11
+    DISCRETE_TRIAL_ONSET_OFFSET = 7
+    CONTINUOUS_TRIAL_ONSET_OFFSET = 8
 
-    CURSORVELOCITY2D = 12
+    CURSORVELOCITY2D = 9
 
     # Allen data
     DRIFTING_GRATINGS = 13

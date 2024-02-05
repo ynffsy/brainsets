@@ -35,3 +35,8 @@ class StringIntEnum(Enum):
             return mapping[normalized_string]
         # if there is no match raise an error
         raise ValueError(f"Could not find {string} in {cls.__name__}")
+
+    @classmethod
+    def max_value(cls):
+        r"""Return the maximum value of the enum."""
+        return max(cls.__members__.values(), key=lambda x: x.value).value
