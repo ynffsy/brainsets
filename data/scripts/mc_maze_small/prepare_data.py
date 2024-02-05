@@ -4,7 +4,6 @@ import datetime
 import logging
 
 import numpy as np
-import torch
 from pynwb import NWBHDF5IO
 from scipy.ndimage import binary_dilation
 
@@ -40,8 +39,8 @@ def extract_trials(nwbfile):
 
     # the dataset has pre-defined train/valid splits, we will use the valid split
     # as our test
-    train_mask = torch.BoolTensor(trial_table.split == "train")
-    test_mask = torch.BoolTensor(trial_table.split == "val")
+    train_mask = trial_table.split.to_numpy() == "train"
+    test_mask = trial_table.split.to_numpy() == "val"
 
     trials.train_mask = train_mask
     trials.test_mask = test_mask
@@ -67,10 +66,9 @@ def extract_behavior(nwbfile, trials):
     hand_vel = hand_vel / 1000.0
 
     # create a behavior type segmentation mask
-    timestamps = torch.tensor(timestamps)
-    behavior_type = torch.ones_like(timestamps, dtype=torch.long) * REACHING.RANDOM
+    behavior_type = np.ones_like(timestamps, dtype=np.int64) * REACHING.RANDOM
     # report accuracy only on the evaluation intervals
-    eval_mask = torch.zeros_like(timestamps, dtype=torch.bool)
+    eval_mask = np.zeros_like(timestamps, dtype=bool)
 
     for i in range(len(trials)):
         # first we check whether the trials are valid or not
@@ -90,9 +88,9 @@ def extract_behavior(nwbfile, trials):
 
     behavior = IrregularTimeSeries(
         timestamps=timestamps,
-        hand_pos=torch.tensor(hand_pos),
-        hand_vel=torch.tensor(hand_vel),
-        eye_pos=torch.tensor(eye_pos),
+        hand_pos=hand_pos,
+        hand_vel=hand_vel,
+        eye_pos=eye_pos,
         type=behavior_type,
         eval_mask=eval_mask,
     )

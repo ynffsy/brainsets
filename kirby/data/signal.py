@@ -148,9 +148,9 @@ def cube_to_long(
 
         trials.append(
             IrregularTimeSeries(
-                timestamps=torch.tensor(ts_),
-                unit_index=torch.tensor(channels_),
-                types=torch.ones(len(ts_))
+                timestamps=ts_,
+                unit_index=channels_,
+                types=np.ones(len(ts_))
                 * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
             )
         )

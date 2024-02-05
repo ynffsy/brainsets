@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 
 from kirby.data import (
     Data,
@@ -70,14 +69,14 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
 
 
     # convert unit metadata to a Data object
-    # Cast to torch tensors
+    # Cast to np.ndarray
     unit_meta_long = {}
     for key, item in unit_meta[0].items():
         stacked_array = np.stack([x[key] for x in unit_meta], axis=0)
         if np.issubdtype(type(item), np.number):
             if np.issubdtype(type(item), np.unsignedinteger):
                 stacked_array = stacked_array.astype(np.int64)
-            unit_meta_long[key] = torch.tensor(stacked_array)
+            unit_meta_long[key] = np.array(stacked_array)
         else:
             unit_meta_long[key] = stacked_array
     units = Data(**unit_meta_long)
@@ -88,8 +87,8 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
 
     # create spikes object
     spikes = IrregularTimeSeries(
-        timestamps=torch.tensor(timestamps),
-        unit_index=torch.tensor(unit_index),
+        timestamps=timestamps,
+        unit_index=unit_index,
     )
 
     # make sure to sort ethe spikes

@@ -4,7 +4,6 @@ import datetime
 import logging
 
 import numpy as np
-import torch
 from pynwb import NWBHDF5IO
 from scipy.ndimage import binary_dilation
 
@@ -39,7 +38,7 @@ def extract_trials(nwbfile):
     )
     trials = Interval.from_dataframe(trial_table)
 
-    is_valid = torch.logical_and(
+    is_valid = np.logical_and(
         trials.discard_trial == 0.0, trials.task_success == 1.0
     )
     trials.is_valid = is_valid
@@ -72,8 +71,7 @@ def extract_behavior(nwbfile, trials):
     hand_acc = hand_acc / 800.0
 
     # create a behavior type segmentation mask
-    timestamps = torch.tensor(timestamps)
-    behavior_type = torch.ones_like(timestamps, dtype=torch.long) * REACHING.RANDOM
+    behavior_type = np.ones_like(timestamps, dtype=np.int64) * REACHING.RANDOM
     for i in range(len(trials)):
         # first we check whether the trials are valid or not
         if trials.is_valid[i]:
@@ -101,12 +99,12 @@ def extract_behavior(nwbfile, trials):
 
     behavior = IrregularTimeSeries(
         timestamps=timestamps,
-        cursor_pos=torch.tensor(cursor_pos),
-        cursor_vel=torch.tensor(cursor_vel),
-        hand_pos=torch.tensor(hand_pos),
-        hand_vel=torch.tensor(hand_vel),
-        hand_acc=torch.tensor(hand_acc),
-        eye_pos=torch.tensor(eye_pos),
+        cursor_pos=cursor_pos,
+        cursor_vel=cursor_vel,
+        hand_pos=hand_pos,
+        hand_vel=hand_vel,
+        hand_acc=hand_acc,
+        eye_pos=eye_pos,
         type=behavior_type,
     )
 
@@ -192,8 +190,8 @@ def main():
 
             # register session
             session_start, session_end = (
-                behavior.timestamps[0].item(),
-                behavior.timestamps[-1].item(),
+                behavior.timestamps[0],
+                behavior.timestamps[-1],
             )
 
             data = Data(
