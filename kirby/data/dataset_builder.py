@@ -155,17 +155,17 @@ class SessionContextManager:
 
         sortset_id = id if id is not None else self.sortset.id
         # add prefix to unit names
-        units.unit_name = [
+        units.unit_name = np.array([
             f"{self.builder.experiment_name}/{sortset_id}/{unit}"
             for unit in units.unit_name
-        ]
+        ])
 
         if sortset is None:
             sortset = SortsetDescription(
                 id=id,
                 subject=self.subject.id if self.subject is not None else "",
                 sessions=sessions,
-                units=units.unit_name,
+                units=units.unit_name.tolist(),
                 areas=areas,
                 recording_tech=recording_tech,
                 **kwargs,
@@ -204,7 +204,7 @@ class SessionContextManager:
     def register_data(self, data):
         self.data = data
         self.register_split(
-            "full", 
+            "full",
             Interval(start=np.array([data.start]), end=np.array([data.end]))
         )
 

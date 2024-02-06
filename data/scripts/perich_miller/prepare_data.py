@@ -8,13 +8,14 @@ import re
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import scipy
 import torch
 from scipy.ndimage import binary_dilation, binary_erosion
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from kirby.data import Data, Interval, IrregularTimeSeries
+from kirby.data import ArrayDict, Data, Interval, IrregularTimeSeries
 from kirby.tasks.reaching import REACHING
 from kirby.taxonomy import (
     ChunkDescription,
@@ -156,16 +157,9 @@ def extract_spikes(mat_dict: dict, prefix: str):
     names = np.concatenate(names)
     types = np.concatenate(types)
 
-    # Cast to torch tensors
-    unit_meta_long = {}
-    for key, item in unit_meta[0].items():
-        stacked_array = np.stack([x[key] for x in unit_meta], axis=0)
-        if np.issubdtype(type(item), np.number):
-            if np.issubdtype(type(item), np.unsignedinteger):
-                stacked_array = stacked_array.astype(np.int64)
-            unit_meta_long[key] = torch.tensor(stacked_array)
-        else:
-            unit_meta_long[key] = stacked_array
+    # convert unit metadata to a Data object
+    unit_meta_df = pd.DataFrame(unit_meta) # list of dicts to dataframe
+    units = ArrayDict.from_dataframe(unit_meta_df, unsigned_to_long=True)
 
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
@@ -181,8 +175,6 @@ def extract_spikes(mat_dict: dict, prefix: str):
         unit_index=torch.tensor(unit_index),
         types=torch.tensor(types),
     )
-
-    units = Data(**unit_meta_long)
 
     return spikes, units, list(areas)
 

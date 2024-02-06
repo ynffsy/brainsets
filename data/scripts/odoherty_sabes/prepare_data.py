@@ -9,11 +9,13 @@ from typing import List, Tuple
 
 import h5py
 import numpy as np
+import pandas as pd
 import torch
 from scipy.ndimage import binary_dilation
 from tqdm import tqdm
 
 from kirby.data import (
+    ArrayDict,
     Channel,
     Data,
     IrregularTimeSeries,
@@ -454,15 +456,9 @@ def extract_spikes(h5file: h5py.File, prefix: str):
     unit_index = np.concatenate(unit_index)
     types = np.concatenate(types)
 
-    # Cast to torch tensors
-    unit_meta_long = {}
-    for key, item in unit_meta[0].items():
-        if np.issubdtype(type(item), np.number):
-            unit_meta_long[key] = torch.tensor(
-                np.stack([x[key] for x in unit_meta], axis=0)
-            )
-        else:
-            unit_meta_long[key] = np.stack([x[key] for x in unit_meta], axis=0)
+    # convert unit metadata to a Data object
+    unit_meta_df = pd.DataFrame(unit_meta) # list of dicts to dataframe
+    units = ArrayDict.from_dataframe(unit_meta_df, unsigned_to_long=True)
 
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
@@ -477,7 +473,6 @@ def extract_spikes(h5file: h5py.File, prefix: str):
         types=torch.tensor(types),
     )
 
-    units = Data(**unit_meta_long)
     return spikes, units, chan_names
 
 

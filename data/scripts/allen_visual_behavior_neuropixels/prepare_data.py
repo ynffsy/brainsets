@@ -6,11 +6,12 @@ import logging
 import os
 
 import numpy as np
+import pandas as pd
 import torch
 from allensdk.brain_observatory.ecephys.ecephys_project_cache import EcephysProjectCache
 from tqdm import tqdm
 
-from kirby.data import Data, Interval, IrregularTimeSeries
+from kirby.data import ArrayDict, Data, Interval, IrregularTimeSeries
 from kirby.tasks.visual_coding import VISUAL_CODING
 from kirby.taxonomy import (
     ChunkDescription,
@@ -76,16 +77,9 @@ def extract_spikes(units, prefix):
     unit_index = np.concatenate(unit_index)
     types = np.concatenate(types)
 
-    # Cast to torch tensors
-    unit_meta_long = {}
-    for key, item in unit_meta[0].items():
-        stacked_array = np.stack([x[key] for x in unit_meta], axis=0)
-        if np.issubdtype(type(item), np.number):
-            if np.issubdtype(type(item), np.unsignedinteger):
-                stacked_array = stacked_array.astype(np.int64)
-            unit_meta_long[key] = torch.tensor(stacked_array)
-        else:
-            unit_meta_long[key] = stacked_array
+    # convert unit metadata to a Data object
+    unit_meta_df = pd.DataFrame(unit_meta) # list of dicts to dataframe
+    units = ArrayDict.from_dataframe(unit_meta_df, unsigned_to_long=True)
 
     sorted = np.argsort(spikes)
     spikes = spikes[sorted]
@@ -100,7 +94,6 @@ def extract_spikes(units, prefix):
         types=torch.tensor(types),
     )
 
-    units = Data(**unit_meta_long)
     return spikes, units
 
 
