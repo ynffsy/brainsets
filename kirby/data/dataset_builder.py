@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 from typing import (
     List,
+    Dict,
     Optional,
     Union,
     Tuple,
@@ -13,16 +14,20 @@ from typing import (
 
 import h5py
 import numpy as np
+from kirby.taxonomy.core import StringIntEnum
 
 from kirby.taxonomy import (
     DandisetDescription,
     SessionDescription,
     SortsetDescription,
     SubjectDescription,
+    TrialDescription,
     to_serializable,
+    Task, RecordingTech, Stimulus, Output, Sex,
+    Macaque,
 )
 from kirby.utils import make_directory
-from kirby.data import Interval, IrregularTimeSeries
+from kirby.data import Interval, IrregularTimeSeries, ArrayDict, Data
 
 
 class DatasetBuilder:
@@ -52,8 +57,8 @@ class DatasetBuilder:
         # todo raise warning if it does exist, since some files might be overwritten
         make_directory(self.processed_folder_path, prompt_if_exists=False)
 
-        self.subjects = []
-        self.sortsets = []
+        self.subjects: List[SubjectDescription] = []
+        self.sortsets: List[SortsetDescription] = []
 
     def new_session(self):
         # initialize the session
@@ -72,6 +77,14 @@ class DatasetBuilder:
         return next(
             (member for member in self.sortsets if member.id == sortset_id), None
         )
+
+    def get_subject(self, subject_id):
+        return next(
+            (member for member in self.subjects if member.id == subject_id), None
+        )
+
+    def get_all_sessions(self):
+        return sum([sortset.sessions for sortset in self.sortsets], [])
 
     def get_all_splits(self):
         """Return a list of all splits in the dataset"""
@@ -110,66 +123,132 @@ class DatasetBuilder:
 
 class SessionContextManager:
     def __init__(self, builder):
-        self.builder = builder
+        self.builder: DatasetBuilder = builder
 
-        self.subject = None
-        self.sortset = None
-        self.session = None
-        self.data = None
+        self.subject: Optional[SubjectDescription] = None
+        self.sortset: Optional[SortsetDescription] = None
+        self.session: Optional[SessionDescription] = None
+        self.data: Optional[Data] = None
 
     def __enter__(self):
         return self
 
-    def register_subject(self, subject: SubjectDescription = None, **kwargs):
+    def register_subject(
+        self, 
+        subject: SubjectDescription = None,
+        *,
+        id: str = None,
+        species: str = None,
+        age: float = 0.0,
+        sex: Sex = Sex.UNKNOWN,
+        genotype: str = "unknown",
+    ):
+        """Register subject metadata onto the session context manager.
+
+        Args:
+            subject: A :class:`~kirby.taxonomy.SubjectDescription` object containing
+                the subject metadata. Either provide this, or the following arguments.
+            id: A sortset identifier string. Must be unique within the dandiset.
+                Must be provided if `sortset` argument is not provided.
+            species: A string representing the species of the subject.
+                Must be provided if `sortset` argument is not provided.
+            age (optional): The age of the subject in days.
+            sex (optional): A :class:`~kirby.taxonomy.Sex` enum.
+            genotype (optional): A string representing the genotype of the subject.
+
+        Example:
+            ```
+            subject = extract_subject_from_nwb(nwbfile) # a SubjectDescription object
+            session.register_subject(subject)
+            ```
+        """
+
         if self.subject is not None:
             raise ValueError(
                 "A subject was already registered. A session can only have "
                 "one subject."
             )
 
-        # add subject to the session
         if subject is None:
-            subject = SubjectDescription(**kwargs)
+            assert id is not None, "Subject id must be provided"
+            assert species is not None, "Subject species must be provided"
+            subject = SubjectDescription(
+                id=id,
+                species=species,
+                age=age,
+                sex=sex,
+                genotype=genotype,
+            )
+
         self.subject = subject
 
         # if sortset was defined before subject, we need to update the reference
         if self.sortset is not None:
-            self.sortset.subject = subject.id
+            self.sortset.subject = self.subject.id
 
     def register_sortset(
         self,
         sortset: SortsetDescription = None,
         *,
-        id=None,
-        units,
-        sessions=[],
-        areas=[],
-        recording_tech=[],
-        **kwargs,
+        id: str = None,
+        units: List[str],
+        areas: Union[List[StringIntEnum], List[Macaque]] = [],
+        recording_tech: List[RecordingTech] = [],
     ):
+        """Register sortset metadata onto the session context manager.
+
+        Args:
+            sortset: A :class:`~kirby.taxonomy.SortsetDescription` object.
+                Either provide this, or the following arguments.
+            id: A sortset identifier string. Must be unique within the dandiset.
+                Must be provided if `sortset` argument is not provided.
+            units: A list of unit identifiers. These unit-ids must be unique within
+                the dandiset. Must always be provided.
+            areas (optional): A list of :class:`~kirby.taxonomy.StringIntEnum` or
+                :class:`~kirby.taxonomy.Macaque` enums.
+            recording_tech (optional): A list of :class:`~kirby.taxonomy.RecordingTech` 
+                enums.
+
+        Example:
+            ```
+            # Get units information from nwbfile using this dandi util function:
+            spikes, units = extract_spikes_from_nwbfile(
+                nwbfile,
+                recording_tech=RecordingTech.UTAH_ARRAY_SPIKES,
+            )
+
+            session_context_manager.register_sortset(
+                id="jenkins_20090928",
+                units=units,
+            )
+            ```
+        """
+
         if self.sortset is not None:
             raise ValueError(
                 "A sortset was already registered. A session can only have "
                 "one sortset."
             )
 
-        sortset_id = id if id is not None else self.sortset.id
         # add prefix to unit names
-        units.unit_name = np.array([
-            f"{self.builder.experiment_name}/{sortset_id}/{unit}"
-            for unit in units.unit_name
-        ])
+        units.id = np.array(
+            [f"{self.builder.experiment_name}/{id}/{unit_id}" for unit_id in units.id]
+        )
 
         if sortset is None:
+            assert id is not None, "Sortset id must be provided"
+            assert units is not None, "Sortset units must be provided"
             sortset = SortsetDescription(
                 id=id,
-                subject=self.subject.id if self.subject is not None else "",
-                sessions=sessions,
-                units=units.unit_name.tolist(),
+                subject=self.subject.id if self.subject else "",
+                sessions=[], # will be filled by register_session(...)
+                units=units.id.tolist(),
                 areas=areas,
                 recording_tech=recording_tech,
-                **kwargs,
             )
+        else:
+            sortset.units = units.id.tolist()
+            sortset.sessions = []
 
         # Check if the sortset is already registered
         existing_sortset = self.builder.get_sortset(sortset.id)
@@ -177,7 +256,18 @@ class SessionContextManager:
         if existing_sortset is None:
             self.sortset = sortset
         else:
-            # If it exists, update the reference
+            # If it exists, make sure all the properties match and
+            # update the reference
+            for key in sortset.as_dict().keys():
+                if (key != "sessions" and  # sessions list is not expected to match
+                    (getattr(existing_sortset, key) != getattr(sortset, key))
+                ):
+                    raise ValueError(
+                        f"Sortset {sortset.id} has already been registered "
+                        f"with different properties. Mismatch at key {key}. "
+                        f"Existing: {getattr(existing_sortset, key)}, "
+                        f"New: {getattr(sortset, key)}"
+                    )
             self.sortset = existing_sortset
 
         # if session was defined before sortset, we need to update the reference
@@ -185,23 +275,102 @@ class SessionContextManager:
             self.sortset.sessions.append(self.session)
 
     def register_session(
-        self, session: SessionDescription = None, *, trials=[], **kwargs
-    ):
+        self, 
+        session: SessionDescription = None,
+        *,
+        id: str = None,
+        recording_date: datetime.datetime = None,
+        task: Task = None,
+        fields: Dict[Union[RecordingTech, Stimulus, Output], str] = None,
+        trials: List[TrialDescription] = []
+    ) -> None:
+        """Register session metadata onto the context manager.
+
+        Args:
+            session: A :class:`~kirby.taxonomy.SessionDescription` object.
+                Either provide this, or the following arguments.
+            id: A session identifier string. Must be unique within the dandiset.
+                Must be provided if `session` argument is not provided.
+            recording_date: A datetime object representing the date of the recording.
+                Must be provided if `session` argument is not provided.
+            task: A :class:`~kirby.taxonomy.Task` enum
+                Must be provided if `session` argument is not provided.
+            fields: A dictionary mapping 
+                :class:`~kirby.taxonomy.RecordingTech`, 
+                :class:`~kirby.taxonomy.Stimulus`,
+                or :class:`~kirby.taxonomy.Output` enums to strings marking the
+                field names in the data object corresponding to that type of data.
+                Must be provided if `session` argument is not provided.
+            trials (optional): A list of :class:`~kirby.taxonomy.TrialDescription`
+                objects.
+
+        Example:
+            ```
+            session_context_manager.register_session(
+                id="jenkins_20090928_maze",
+                recording_date=datetime.datetime.strptime("20090928", "%Y%m%d"),
+                task=Task.DISCRETE_REACHING,
+                fields={
+                    RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
+                    Output.CURSOR2D: "behavior.hand_vel",
+                },
+            )
+            ```
+        """
         if self.session is not None:
             raise ValueError(
-                "A session description was already registered. A session "
-                "can only have one description."
+                "A session was already registered. "
+                "You can only register one session per session context."
             )
 
         if session is None:
-            session = SessionDescription(trials=trials, **kwargs)
+            assert id is not None, "Session id must be provided"
+            assert recording_date is not None, "Session recording date must be provided"
+            assert task is not None, "Session task must be provided"
+            assert fields is not None, "Session fields must be provided"
+            session = SessionDescription(
+                id=id,
+                recording_date=recording_date,
+                task=task,
+                fields=fields,
+                trials=trials,
+                splits={}, # Will fill in register_split(...)
+                dandiset_id=None, # Will fill in __exit__
+                subject_id=None, # Will fill in __exit__
+                sortset_id=None, # Will fill in __exit__
+            )
+        else:
+            session.splits = {}
+            session.dandiset_id = None
+            session.subject_id = None
+            session.sortset_id = None
+
+        # Ensure id is unique within entire dandiset
+        for existing_session in self.builder.get_all_sessions():
+            if existing_session.id == session.id:
+                raise ValueError(
+                    f"Session with id {session.id} already exists. "
+                    f"Session ids must be unique within the entire dandiset."
+                )
+
+        
         self.session = session
 
-        # if sortset was defined before session, we need to update the reference
+        # If sortset was defined before session, we need to update the reference
         if self.sortset is not None:
-            self.sortset.sessions.append(session)
+            self.sortset.sessions.append(self.session)
 
-    def register_data(self, data):
+    def register_data(
+        self, 
+        data: Data
+    ):
+        """Register a :class:`~kirby.data.Data` object for this session."""
+
+        assert self.data is None, (
+            "A data object was already registered. "
+            "You can only register one data object per session."
+        )
+
         self.data = data
         self.register_split(
             "full",
@@ -215,9 +384,13 @@ class SessionContextManager:
     ):
         """
         Args:
-            name: name of the split
-            interval: Interval object representing the split
+            name: name of the split, eg. standard names:
+                "train", "test", "valid" (for validation)
+            interval: :class:`kirby.data.Interval` object defining the split
         """
+        if self.session is None:
+            raise ValueError("A session must be registered before registering splits")
+
         if self.session.splits is None:
             self.session.splits = {}
 
@@ -226,7 +399,7 @@ class SessionContextManager:
 
         # Can only handle Interval or list of tuples as split
         if not isinstance(interval, Interval):
-            raise TypeError(f"Cannot handle interval type {type(interval)}")
+            raise TypeError(f"Cannot handle type {type(interval)}")
 
         self.session.splits[name] = list(zip(interval.start, interval.end))
         self.data.add_split_mask(name, interval)
@@ -278,10 +451,27 @@ class SessionContextManager:
         assert self.subject is not None, "A subject must be registered."
         assert self.sortset is not None, "A sortset must be registered."
         assert self.session is not None, "A session must be registered."
+        assert self.data is not None, "A data object must be registered."
 
-        # add subject to the dandiset if it hasn't been registered yet
+        self.session.dandiset_id = self.builder.experiment_name
+        self.session.subject_id = self.subject.id
+        self.session.sortset_id = self.sortset.id
+
+        # add subject to the dandiset if it hasn't been registered yet.
+        # if this subject has already been registered, we need to make sure all the
+        # properties match
         if not self.builder.is_subject_already_registered(self.subject.id):
             self.builder.subjects.append(self.subject)
+        else:
+            existing_subject = self.builder.get_subject(self.subject.id)
+            for key in self.subject.as_dict().keys():
+                if (getattr(existing_subject, key) != getattr(self.subject, key)):
+                    raise ValueError(
+                        f"Subject {self.subject.id} has already been registered "
+                        f"with different properties. Mismatch at key {key}. "
+                        f"Existing: {getattr(existing_subject, key)}, "
+                        f"New: {getattr(self.subject, key)}"
+                        )
 
         # add sortset to the dandiset if it hasn't been registered yet
         if not self.builder.is_sortset_already_registered(self.sortset.id):

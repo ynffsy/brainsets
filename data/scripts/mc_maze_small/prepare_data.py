@@ -112,7 +112,7 @@ def main():
         raw_folder_path=args.input_dir,
         processed_folder_path=args.output_dir,
         # metadata for the dataset
-        experiment_name="nlb_maze_small",
+        experiment_name="mc_maze_small",
         origin_version="dandi/000140/0.220113.0408",
         derived_version="1.0.0",
         source="https://dandiarchive.org/dandiset/000140",
@@ -192,9 +192,6 @@ def main():
                 # metadata
                 start=session_start,
                 end=session_end,
-                session=session_id,
-                sortset=sortset_id,
-                subject=subject_id,
                 # neural activity
                 spikes=spikes,
                 units=units,

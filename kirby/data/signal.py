@@ -160,7 +160,7 @@ def cube_to_long(
         count=torch.Tensor(counts.astype(int)),
         channel_name=[f"{channel_prefix}{c:03}" for c in range(cube.shape[2])],
         unit_number=torch.zeros(cube.shape[2]),
-        unit_name=[f"{channel_prefix}{c}" for c in range(cube.shape[2])],
+        id=[f"{channel_prefix}{c}" for c in range(cube.shape[2])],
         channel_number=torch.arange(cube.shape[2]),
         type=torch.ones(cube.shape[2])
         * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),

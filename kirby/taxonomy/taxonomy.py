@@ -130,24 +130,29 @@ class TrialDescription(Dictable):
 
 @dataclass
 class SessionDescription(Dictable):
-    id: str
+    id: str 
     recording_date: datetime.datetime
     task: Task
     fields: Dict[Union[RecordingTech, Stimulus, Output], str]
     trials: List[TrialDescription]
-    splits: Optional[Dict[str, List[Tuple[float, float]]]] = None
-    start_time: Optional[datetime.datetime] = None  # todo: deprecate
-    end_time: Optional[datetime.datetime] = None  # todo: deprecate
+    # Fields below are automatically filled by the SessionContextManager
+    # Do not set them manually.
+    splits: Dict[str, List[Tuple[float, float]]] = None # should be filled by register_split() only
+    dandiset_id: Optional[str] = None
+    subject_id: Optional[str] = None
+    sortset_id: Optional[str] = None
 
 
 @dataclass
 class SortsetDescription(Dictable):
     id: str
+    units: List[str]
     subject: str
     areas: Union[List[StringIntEnum], List[Macaque]]
     recording_tech: List[RecordingTech]
-    sessions: List[SessionDescription]
-    units: List[str]
+    # Fields below are automatically filled by the SessionContextManager
+    # Do not set them manually.
+    sessions: List[SessionDescription] = None # should be filled by register_session() only
 
 
 @dataclass

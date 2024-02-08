@@ -53,7 +53,7 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
     for i in range(len(units)):
         # label unit
         group_name = electrodes["group_name"][i]
-        unit_name = f"group_{group_name}/unit_{i}"
+        unit_id = f"group_{group_name}/unit_{i}"
 
         # extract spikes
         spiketimes = units[i]
@@ -63,7 +63,7 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
         # extract unit metadata
         unit_meta.append(
             {
-                "unit_name": unit_name,
+                "id": unit_id,
                 "unit_number": i,
                 "count": len(spiketimes),
                 "type": int(recording_tech),
