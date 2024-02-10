@@ -31,6 +31,38 @@ from kirby.data import Interval, IrregularTimeSeries, ArrayDict, Data
 
 
 class DatasetBuilder:
+    r"""A class to help build a standardized dataset.
+     
+    Args:
+        raw_folder_path: The path to the raw data folder.
+        processed_folder_path: The path to the processed data folder.
+        experiment_name: The name of the experiment.
+        origin_version: The version of the data depending on source (dandi version, 
+            zenodo version, etc). If version is unknown, use "unknown".
+        derived_version: The version of the data after processing, this is a unique
+            identifier for the processed data, incase you need to have multiple versions
+            of the processed data.
+        metadata_version: The version of the metadata, this should be the version of 
+            our package, this will be deprecated and set automatically. Defaults to 
+            "0.0.2".
+        source: The source of the data. This is the link to the data source (url), if 
+            the data is not public, add a description of the data source.
+        description: A description of the data.
+
+    .. code-block:: python
+    
+            from kirby.data import DatasetBuilder
+    
+            builder = DatasetBuilder(
+                raw_folder_path="/path/to/raw",
+                processed_folder_path="/path/to/processed",
+                experiment_name="my_experiment",
+                origin_version="unknown",
+                derived_version="0.0.1",
+                source="https://example.com",
+                description="This is a description of the data."
+            )
+    """
     def __init__(
         self,
         raw_folder_path: str,
@@ -61,29 +93,47 @@ class DatasetBuilder:
         self.sortsets: List[SortsetDescription] = []
 
     def new_session(self):
+        r"""Start a new :obj:`SessionContextManager`, which will help collect the data 
+        and metadata for a new session.
+        
+        .. warning::
+            This method should be used as a context manager, so it should be used with 
+            the `with` statement. This is to ensure that the session is properly 
+            registered to the dandiset after data collection is complete.
+
+            .. code-block:: python
+                
+                with builder.new_session() as session:
+                    ...
+        """
         # initialize the session
         # each session should have 1 subject and 1 sortset
         return SessionContextManager(self)
 
     def is_subject_already_registered(self, subject_id):
+        r"""Check if a subject is already registered to the dandiset."""
         # register subject to the dandiset if it hasn't been registered yet
         return any([subject_id == member.id for member in self.subjects])
 
     def is_sortset_already_registered(self, sortset_id):
+        r"""Check if a sortset is already registered to the dandiset."""
         # Check if the sortset is already registered
         return any([sortset_id == member.id for member in self.sortsets])
 
     def get_sortset(self, sortset_id):
+        r"""Get the (:obj:`SortestDescription`) of a sortset by its id."""
         return next(
             (member for member in self.sortsets if member.id == sortset_id), None
         )
 
     def get_subject(self, subject_id):
+        r"""Get the (:obj:`SubjectDescription`) of a subject by its id."""
         return next(
             (member for member in self.subjects if member.id == subject_id), None
         )
 
     def get_all_sessions(self):
+        """Return a list of all sessions in the dataset"""
         return sum([sortset.sessions for sortset in self.sortsets], [])
 
     def get_all_splits(self):
@@ -96,6 +146,13 @@ class DatasetBuilder:
         return list(splits)
 
     def finish(self):
+        r"""Save the dandiset description to disk. This should be called after all
+        sessions have been registered.
+        
+        .. code-block:: python
+            
+            builder.finish()
+        """
         # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
         description = DandisetDescription(
             id=self.experiment_name,
@@ -122,6 +179,7 @@ class DatasetBuilder:
 
 
 class SessionContextManager:
+    r"""A context manager to help collect the data and metadata for a new session."""
     def __init__(self, builder):
         self.builder: DatasetBuilder = builder
 
@@ -156,11 +214,11 @@ class SessionContextManager:
             sex (optional): A :class:`~kirby.taxonomy.Sex` enum.
             genotype (optional): A string representing the genotype of the subject.
 
-        Example:
-            ```
-            subject = extract_subject_from_nwb(nwbfile) # a SubjectDescription object
+        .. code-block:: python
+
+            subject = extract_subject_from_nwb(nwbfile)
             session.register_subject(subject)
-            ```
+
         """
 
         if self.subject is not None:
@@ -209,9 +267,8 @@ class SessionContextManager:
             recording_tech (optional): A list of :class:`~kirby.taxonomy.RecordingTech` 
                 enums.
 
-        Example:
-            ```
-            # Get units information from nwbfile using this dandi util function:
+        .. code-block:: python
+
             spikes, units = extract_spikes_from_nwbfile(
                 nwbfile,
                 recording_tech=RecordingTech.UTAH_ARRAY_SPIKES,
@@ -221,7 +278,7 @@ class SessionContextManager:
                 id="jenkins_20090928",
                 units=units,
             )
-            ```
+
         """
 
         if self.sortset is not None:
@@ -304,8 +361,8 @@ class SessionContextManager:
             trials (optional): A list of :class:`~kirby.taxonomy.TrialDescription`
                 objects.
 
-        Example:
-            ```
+        .. code-block:: python
+
             session_context_manager.register_session(
                 id="jenkins_20090928_maze",
                 recording_date=datetime.datetime.strptime("20090928", "%Y%m%d"),
@@ -315,7 +372,7 @@ class SessionContextManager:
                     Output.CURSOR2D: "behavior.hand_vel",
                 },
             )
-            ```
+
         """
         if self.session is not None:
             raise ValueError(
