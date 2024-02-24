@@ -19,5 +19,6 @@ from .taxonomy import (
     TrialDescription,
     decoder_registry,
     to_serializable,
+    REACHING
 )
 from .weight_registry import weight_registry

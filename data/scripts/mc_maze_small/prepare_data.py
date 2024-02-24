@@ -33,14 +33,15 @@ def extract_trials(nwbfile):
         columns={
             "start_time": "start",
             "stop_time": "end",
+            "split": "split_indicator",
         }
     )
     trials = Interval.from_dataframe(trial_table)
 
     # the dataset has pre-defined train/valid splits, we will use the valid split
     # as our test
-    train_mask_nwb = trial_table.split.to_numpy() == "train"
-    test_mask_nwb = trial_table.split.to_numpy() == "val"
+    train_mask_nwb = trial_table.split_indicator.to_numpy() == "train"
+    test_mask_nwb = trial_table.split_indicator.to_numpy() == "val"
 
     trials.train_mask_nwb = train_mask_nwb # Naming with "_" since train_mask is reserved 
     trials.test_mask_nwb = test_mask_nwb # Naming with "_" since test_mask is reserved
@@ -94,6 +95,7 @@ def extract_behavior(nwbfile, trials):
         eye_pos=eye_pos,
         type=behavior_type,
         eval_mask=eval_mask,
+        domain="auto",
     )
 
     return behavior
@@ -188,25 +190,28 @@ def main():
                 behavior.timestamps[-1].item(),
             )
 
+            domain = Interval.from_list([(session_start, session_end)])
+
             data = Data(
-                # metadata
-                start=session_start,
-                end=session_end,
                 # neural activity
                 spikes=spikes,
                 units=units,
                 # stimuli and behavior
                 trials=trials,
                 behavior=behavior,
+                # domain
+                domain=domain,
             )
 
             session.register_data(data)
 
             # split and register trials into train, validation and test
-            train_trials, valid_trials = trials[trials.train_mask_nwb].split(
-                [0.8, 0.2], shuffle=True, random_seed=42
+            train_trials, valid_trials = (
+                trials
+                .select_by_mask(trials.train_mask_nwb)
+                .split([0.8, 0.2], shuffle=True, random_seed=42)
             )
-            test_trials = trials[trials.test_mask_nwb]
+            test_trials = trials.select_by_mask(trials.test_mask_nwb)
 
             session.register_split("train", train_trials)
             session.register_split("valid", valid_trials)

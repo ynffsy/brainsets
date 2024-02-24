@@ -1,11 +1,31 @@
 from enum import Enum
 
 
-class StringIntEnum(Enum):
-    """Enum where the value is a string, but can be cast to an int."""
+class NestedEnumType(type(Enum)):
+    def __new__(cls, clsname, bases, clsdict, parent=None):
+        new_cls = super().__new__(cls, clsname, bases, clsdict)
+        new_cls._parent = parent
 
+        if parent is not None:
+            for name, member in new_cls.__members__.items():
+                parent.__setattr__(name, member)
+
+        return new_cls
+
+    def __contains__(cls, member):
+        return (isinstance(member, cls) and (member._name_ in cls._member_map_)) or (
+            member._parent is not None and member._parent in cls
+        )
+
+
+class StringIntEnum(Enum, metaclass=NestedEnumType):
+    """Enum where the value is a string, but can be cast to an int."""
+    
     def __str__(self):
-        return self.name
+        if self._parent is not None:
+            return f"{str(self._parent)}.{self.name}"
+        else:
+            return self.name
 
     def __int__(self):
         return self.value
@@ -16,7 +36,7 @@ class StringIntEnum(Enum):
         will replace spaces with underscores.
 
         Args:
-             string: The string to convert to an enum member.
+            string: The string to convert to an enum member.
 
         Examples:
             >>> from kirby.taxonomy import Sex
@@ -34,7 +54,10 @@ class StringIntEnum(Enum):
         if normalized_string in mapping:
             return mapping[normalized_string]
         # if there is no match raise an error
-        raise ValueError(f"Could not find {string} in {cls.__name__}")
+        raise ValueError(
+            f"{normalized_string} does not exist in {cls.__name__}, "
+            "consider adding it to the enum."
+        )
 
     @classmethod
     def max_value(cls):

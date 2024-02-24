@@ -30,11 +30,11 @@ module allen_visual_behavior_neuropixels_module:
 use rule * from allen_visual_behavior_neuropixels_module as allen_visual_behavior_neuropixels_*
 use rule all from allen_visual_behavior_neuropixels_module as allen_visual_behavior_neuropixels
 
-module perich_miller_module:
-    snakefile: "data/scripts/perich_miller/Snakefile"
+module perich_miller_population_2018_module:
+    snakefile: "data/scripts/perich_miller_population_2018/Snakefile"
     config: config
-use rule * from perich_miller_module as perich_miller_*
-use rule all from perich_miller_module as perich_miller
+use rule * from perich_miller_population_2018_module as perich_miller_population_2018_*
+use rule all from perich_miller_population_2018_module as perich_miller_population_2018
 
 module willett_shenoy_module:
     snakefile: "data/scripts/willett_shenoy/Snakefile"
@@ -70,5 +70,5 @@ use rule all from bouchard_chang_module as bouchard_chang
 # make rules that combine multiple datasets
 rule poyo_neurips:
     input:
-        perich_miller_module.rules.all.input,
+        perich_miller_population_2018_module.rules.all.input,
         odoherty_sabes_module.rules.all.input,

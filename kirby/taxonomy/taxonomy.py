@@ -35,11 +35,7 @@ class RecordingTech(StringIntEnum):
 
 
 class Task(StringIntEnum):
-    # A classic BCI task involving reaching to a 2d target.
-    DISCRETE_REACHING = 0
-
-    # A continuous version of the classic BCI without discrete trials.
-    CONTINUOUS_REACHING = 1
+    REACHING = 0
 
     # A Shenoy-style task involving handwriting different characters.
     DISCRETE_WRITING_CHARACTER = 2
@@ -53,6 +49,17 @@ class Task(StringIntEnum):
 
     # speech
     DISCRETE_SPEAKING_CVSYLLABLE = 6
+
+
+class REACHING(StringIntEnum, parent=Task.REACHING):
+    """A classic BCI task involving reaching to a 2d target."""
+    RANDOM = 0
+    HOLD = 1
+    REACH = 2
+    RETURN = 3
+    INVALID = 4
+    OUTLIER = 5
+    MAX = 6
 
 
 class Stimulus(StringIntEnum):
@@ -91,9 +98,11 @@ class Output(StringIntEnum):
 
 
 class Species(StringIntEnum):
-    MACACA_MULATTA = 0
-    HOMO_SAPIENS = HUMAN = 1
-    MUS_MUSCULUS = 2
+    UNKNOWN = 0
+    MACACA_MULATTA = 1
+    HOMO_SAPIENS = HUMAN = 2
+    MUS_MUSCULUS = 3
+    MACACA_FASCICULARIS = 4
 
 
 class Sex(StringIntEnum):
@@ -229,6 +238,7 @@ class DecoderSpec:
     tag_key: Optional[str] = None
     target_dtype: str = "float32"  # torch.dtype is not serializable.
     behavior_type_key = "behavior.type"
+    subtask_key: Optional[str] = None
 
 
 decoder_registry = {
@@ -242,8 +252,9 @@ decoder_registry = {
     str(Output.CURSORVELOCITY2D) : DecoderSpec(dim=2, 
                                                target_dim=2,
                                        type=OutputType.CONTINUOUS, 
-                                       timestamp_key="behavior.timestamps",
-                                       value_key="behavior.cursor_vel", 
+                                       timestamp_key="cursor.timestamps",
+                                       value_key="cursor.vel", 
+                                       subtask_key="cursor.subtask_index",
                                        loss_fn="mse",
                                       ),
     str(Output.CURSOR2D) : DecoderSpec(dim=2, 

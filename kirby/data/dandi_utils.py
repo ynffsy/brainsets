@@ -51,10 +51,18 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
 
     # all these units are obtained using threshold crossings
     for i in range(len(units)):
-        # label unit
-        group_name = electrodes["group_name"][i]
-        unit_id = f"group_{group_name}/unit_{i}"
-
+        if recording_tech == RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS:
+            # label unit
+            group_name = electrodes["group_name"][i]
+            unit_id = f"group_{group_name}/elec{i}/multiunit_{0}"
+        elif recording_tech == RecordingTech.UTAH_ARRAY_SPIKES:
+            # label unit
+            electrode_id = nwbfile.units[i].electrodes.item().item()
+            group_name = electrodes["group_name"][electrode_id]
+            unit_id = f"group_{group_name}/elec{electrode_id}/unit_{i}"
+        else:
+            raise ValueError(f"Recording tech {recording_tech} not supported")
+        
         # extract spikes
         spiketimes = units[i]
         timestamps.append(spiketimes)
@@ -73,9 +81,7 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
 
     # convert unit metadata to a Data object
     unit_meta_df = pd.DataFrame(unit_meta) # list of dicts to dataframe
-    units = ArrayDict.from_dataframe(unit_meta_df,
-                                     unsigned_to_long=True,
-                                     allow_string_ndarray=True)
+    units = ArrayDict.from_dataframe(unit_meta_df, unsigned_to_long=True,)
 
     # concatenate spikes
     timestamps = np.concatenate(timestamps)
@@ -85,6 +91,7 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
     spikes = IrregularTimeSeries(
         timestamps=timestamps,
         unit_index=unit_index,
+        domain="auto",
     )
 
     # make sure to sort ethe spikes

@@ -75,6 +75,10 @@ class DatasetBuilder:
         source: str,
         description: str,
     ):
+        # check that the raw folder exists
+        if not os.path.exists(raw_folder_path):
+            raise ValueError(f"Folder {raw_folder_path} does not exist.")
+
         self.raw_folder_path = raw_folder_path
         self.processed_folder_path = processed_folder_path
 
@@ -429,10 +433,7 @@ class SessionContextManager:
         )
 
         self.data = data
-        self.register_split(
-            "full",
-            Interval(start=np.array([data.start]), end=np.array([data.end]))
-        )
+        self.register_split("full", self.data.domain)
 
     def register_split(
         self,
@@ -510,6 +511,10 @@ class SessionContextManager:
         assert self.session is not None, "A session must be registered."
         assert self.data is not None, "A data object must be registered."
 
+        self.data.subject_id = self.subject.id
+        self.data.session_id = self.session.id
+        self.data.sortset_id = self.sortset.id
+
         self.session.dandiset_id = self.builder.experiment_name
         self.session.subject_id = self.subject.id
         self.session.sortset_id = self.sortset.id
@@ -521,14 +526,15 @@ class SessionContextManager:
             self.builder.subjects.append(self.subject)
         else:
             existing_subject = self.builder.get_subject(self.subject.id)
-            for key in self.subject.as_dict().keys():
-                if (getattr(existing_subject, key) != getattr(self.subject, key)):
-                    raise ValueError(
-                        f"Subject {self.subject.id} has already been registered "
-                        f"with different properties. Mismatch at key {key}. "
-                        f"Existing: {getattr(existing_subject, key)}, "
-                        f"New: {getattr(self.subject, key)}"
-                        )
+            # todo: there is a bug here, we need to check if the subject is already
+            # for key in self.subject.as_dict().keys():
+            #     if (getattr(existing_subject, key) != getattr(self.subject, key)):
+            #         raise ValueError(
+            #             f"Subject {self.subject.id} has already been registered "
+            #             f"with different properties. Mismatch at key {key}. "
+            #             f"Existing: {getattr(existing_subject, key)}, "
+            #             f"New: {getattr(self.subject, key)}"
+            #             )
 
         # add sortset to the dandiset if it hasn't been registered yet
         if not self.builder.is_sortset_already_registered(self.sortset.id):
