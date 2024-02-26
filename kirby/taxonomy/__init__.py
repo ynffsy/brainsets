@@ -1,24 +1,34 @@
-from .description_helper import DescriptionHelper
-from .macaque import Macaque
-from .taxonomy import (
-    ChunkDescription,
-    DandisetDescription,
-    DecoderSpec,
-    Dictable,
-    Output,
-    OutputType,
+from .core import StringIntEnum
+
+from .recording_tech import (
     RecordingTech,
-    SessionDescription,
-    Sex,
-    SortsetDescription,
-    Species,
-    Stimulus,
-    StringIntEnum,
-    SubjectDescription,
-    Task,
-    TrialDescription,
-    decoder_registry,
-    to_serializable,
-    REACHING
+    Hemisphere,
+    Channel,
+    Probe,
 )
-from .weight_registry import weight_registry
+
+from .subject import (
+    Species,
+    Sex,
+)
+
+from .task import (
+    Task,
+)
+
+from .multitask_readout import (
+    Decoder,
+    DecoderSpec,
+    OutputType,
+    decoder_registry,
+)
+
+from .macaque import Macaque
+
+from .descriptors import (
+    DandisetDescription,
+    SubjectDescription,
+    SortsetDescription,
+    SessionDescription,
+    to_serializable,
+)

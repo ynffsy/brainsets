@@ -23,7 +23,7 @@ from kirby.taxonomy import (
     SubjectDescription,
     TrialDescription,
     to_serializable,
-    Task, RecordingTech, Stimulus, Output, Sex,
+    Task, RecordingTech, Stimulus, Decoder, Sex,
     Macaque,
 )
 from kirby.utils import make_directory
@@ -342,7 +342,7 @@ class SessionContextManager:
         id: str = None,
         recording_date: datetime.datetime = None,
         task: Task = None,
-        fields: Dict[Union[RecordingTech, Stimulus, Output], str] = None,
+        fields: Dict[Union[RecordingTech, Stimulus, Decoder], str] = None,
         trials: List[TrialDescription] = []
     ) -> None:
         """Register session metadata onto the context manager.
