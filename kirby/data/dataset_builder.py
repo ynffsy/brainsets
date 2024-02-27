@@ -21,9 +21,8 @@ from kirby.taxonomy import (
     SessionDescription,
     SortsetDescription,
     SubjectDescription,
-    TrialDescription,
     to_serializable,
-    Task, RecordingTech, Stimulus, Decoder, Sex,
+    Task, RecordingTech,Decoder, Sex,
     Macaque,
 )
 from kirby.utils import make_directory
@@ -342,8 +341,8 @@ class SessionContextManager:
         id: str = None,
         recording_date: datetime.datetime = None,
         task: Task = None,
-        fields: Dict[Union[RecordingTech, Stimulus, Decoder], str] = None,
-        trials: List[TrialDescription] = []
+        fields: Dict[Union[RecordingTech, Decoder], str] = None,
+        trials: List = []
     ) -> None:
         """Register session metadata onto the context manager.
 
@@ -388,12 +387,12 @@ class SessionContextManager:
             assert id is not None, "Session id must be provided"
             assert recording_date is not None, "Session recording date must be provided"
             assert task is not None, "Session task must be provided"
-            assert fields is not None, "Session fields must be provided"
+            # assert fields is not None, "Session fields must be provided"
             session = SessionDescription(
                 id=id,
                 recording_date=recording_date,
                 task=task,
-                fields=fields,
+                fields=[],
                 trials=trials,
                 splits={}, # Will fill in register_split(...)
                 dandiset_id=None, # Will fill in __exit__

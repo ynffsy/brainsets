@@ -46,6 +46,7 @@ class DecoderSpec:
     # Optional fields
     task_key: Optional[str] = None
     subtask_key: Optional[str] = None
+    # target_dtype: str = "float32"  # torch.dtype is not serializable.
 
 
 decoder_registry = {
@@ -74,24 +75,24 @@ decoder_registry = {
         value_key="behavior.cursor_pos",
         loss_fn="mse",
     ),
-    str(Decoder.WRITING_CHARACTER): DecoderSpec(
-        dim=len(Character),
-        target_dim=1,
-        target_dtype="long",
-        type=OutputType.MULTINOMIAL,
-        timestamp_key="stimuli_segments.timestamps",
-        value_key="stimuli_segments.letters",
-        loss_fn="bce",
-    ),
-    str(Decoder.WRITING_LINE): DecoderSpec(
-        dim=len(Line),
-        target_dim=1,
-        target_dtype="long",
-        type=OutputType.MULTINOMIAL,
-        timestamp_key="stimuli_segments.timestamps",
-        value_key="stimuli_segments.letters",
-        loss_fn="bce",
-    ),
+    # str(Decoder.WRITING_CHARACTER): DecoderSpec(
+    #     dim=len(Character),
+    #     target_dim=1,
+    #     target_dtype="long",
+    #     type=OutputType.MULTINOMIAL,
+    #     timestamp_key="stimuli_segments.timestamps",
+    #     value_key="stimuli_segments.letters",
+    #     loss_fn="bce",
+    # ),
+    # str(Decoder.WRITING_LINE): DecoderSpec(
+    #     dim=len(Line),
+    #     target_dim=1,
+    #     target_dtype="long",
+    #     type=OutputType.MULTINOMIAL,
+    #     timestamp_key="stimuli_segments.timestamps",
+    #     value_key="stimuli_segments.letters",
+    #     loss_fn="bce",
+    # ),
     str(Decoder.DRIFTING_GRATINGS): DecoderSpec(
         dim=8,
         target_dim=1,
@@ -101,13 +102,13 @@ decoder_registry = {
         value_key="stimuli_segments.drifting_class",
         loss_fn="bce",
     ),
-    str(Decoder.SPEAKING_CVSYLLABLE): DecoderSpec(
-        dim=len(CVSyllable),  # empty label is included
-        target_dim=1,
-        target_dtype="long",
-        type=OutputType.MULTINOMIAL,
-        timestamp_key="speech.timestamps",
-        value_key="speech.consonant_vowel_syllables",
-        loss_fn="bce",
-    ),
+    # str(Decoder.SPEAKING_CVSYLLABLE): DecoderSpec(
+    #     dim=len(CVSyllable),  # empty label is included
+    #     target_dim=1,
+    #     target_dtype="long",
+    #     type=OutputType.MULTINOMIAL,
+    #     timestamp_key="speech.timestamps",
+    #     value_key="speech.consonant_vowel_syllables",
+    #     loss_fn="bce",
+    # ),
 }

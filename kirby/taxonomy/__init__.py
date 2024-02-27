@@ -1,11 +1,4 @@
-from .core import StringIntEnum
-
-from .recording_tech import (
-    RecordingTech,
-    Hemisphere,
-    Channel,
-    Probe,
-)
+from .core import StringIntEnum, Dictable
 
 from .subject import (
     Species,
@@ -24,6 +17,13 @@ from .multitask_readout import (
 )
 
 from .macaque import Macaque
+
+from .recording_tech import (
+    RecordingTech,
+    Hemisphere,
+    Channel,
+    Probe,
+)
 
 from .descriptors import (
     DandisetDescription,

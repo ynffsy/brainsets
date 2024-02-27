@@ -7,6 +7,7 @@ class NestedEnumType(type(Enum)):
         new_cls._parent = parent
 
         if parent is not None:
+            parent._parent_cls = new_cls
             for name, member in new_cls.__members__.items():
                 parent.__setattr__(name, member)
 
@@ -45,21 +46,34 @@ class StringIntEnum(Enum, metaclass=NestedEnumType):
             >>> Sex.from_string("M")
             <Sex.MALE: 1>
         """
-        # normalize string by replacing spaces with underscores and converting
-        # to upper case
-        normalized_string = string.strip().upper().replace(" ", "_")
-        # create a mapping of enum names to enum members
-        mapping = {name.upper(): member for name, member in cls.__members__.items()}
-        # try to match the string to an enum name
-        if normalized_string in mapping:
-            return mapping[normalized_string]
-        # if there is no match raise an error
-        raise ValueError(
-            f"{normalized_string} does not exist in {cls.__name__}, "
-            "consider adding it to the enum."
-        )
+        nested_string = string.split(".", maxsplit=1)
+        if len(nested_string) > 1:
+            parent = cls.from_string(nested_string[0])
+            return parent._parent_cls.from_string(nested_string[1])
+        else:
+            # normalize string by replacing spaces with underscores and converting
+            # to upper case
+            normalized_string = string.strip().upper().replace(" ", "_")
+            # create a mapping of enum names to enum members
+            mapping = {name.upper(): member for name, member in cls.__members__.items()}
+            # try to match the string to an enum name
+            if normalized_string in mapping:
+                return mapping[normalized_string]
+            # if there is no match raise an error
+            raise ValueError(
+                f"{normalized_string} does not exist in {cls.__name__}, "
+                "consider adding it to the enum."
+            )
 
     @classmethod
     def max_value(cls):
         r"""Return the maximum value of the enum."""
         return max(cls.__members__.values(), key=lambda x: x.value).value
+
+
+class Dictable:
+    """A dataclass that can be converted to a dict."""
+
+    def to_dict(self):
+        """__dict__ doesn't play well with torch.load"""
+        return {k: v for k, v in asdict(self).items()}  # type: ignore

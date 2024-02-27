@@ -12,10 +12,9 @@ from kirby.data.dandi_utils import (
     extract_spikes_from_nwbfile,
     extract_subject_from_nwb,
 )
-from kirby.tasks.reaching import REACHING
+from kirby.taxonomy.task import REACHING
 from kirby.utils import find_files_by_extension
 from kirby.taxonomy import (
-    Output,
     RecordingTech,
     Task,
 )
@@ -67,7 +66,7 @@ def extract_behavior(nwbfile, trials):
     hand_vel = hand_vel / 1000.0
 
     # create a behavior type segmentation mask
-    behavior_type = np.ones_like(timestamps, dtype=np.int64) * REACHING.RANDOM
+    behavior_type = np.ones_like(timestamps, dtype=np.int64) * int(REACHING.RANDOM)
 
     # report accuracy only on the evaluation intervals
     eval_mask = np.zeros_like(timestamps, dtype=bool)
@@ -78,10 +77,10 @@ def extract_behavior(nwbfile, trials):
             behavior_type[
                 (timestamps >= trials.target_on_time[i])
                 & (timestamps < trials.go_cue_time[i])
-            ] = REACHING.CENTER_OUT_HOLD
+            ] = int(REACHING.HOLD)
             behavior_type[
                 (timestamps >= trials.move_onset_time[i]) & (timestamps < trials.end[i])
-            ] = REACHING.CENTER_OUT_REACH
+            ] = int(REACHING.REACH)
 
         eval_mask[
             (timestamps >= (trials.move_onset_time[i] - 0.05))
@@ -93,7 +92,7 @@ def extract_behavior(nwbfile, trials):
         hand_pos=hand_pos,
         hand_vel=hand_vel,
         eye_pos=eye_pos,
-        type=behavior_type,
+        subtask_index=behavior_type,
         eval_mask=eval_mask,
         domain="auto",
     )
@@ -155,11 +154,7 @@ def main():
             session.register_session(
                 id=session_id,
                 recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
-                task=Task.DISCRETE_REACHING,
-                fields={
-                    RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
-                    Output.CURSOR2D: "behavior.hand_vel",
-                },
+                task=Task.REACHING,
             )
 
             # extract spiking activity
@@ -190,8 +185,6 @@ def main():
                 behavior.timestamps[-1].item(),
             )
 
-            domain = Interval.from_list([(session_start, session_end)])
-
             data = Data(
                 # neural activity
                 spikes=spikes,
@@ -200,7 +193,7 @@ def main():
                 trials=trials,
                 behavior=behavior,
                 # domain
-                domain=domain,
+                domain=Interval(session_start, session_end),
             )
 
             session.register_data(data)

@@ -7,14 +7,9 @@ import numpy as np
 
 from pydantic.dataclasses import dataclass
 
+from .core import Dictable, StringIntEnum
 from kirby.taxonomy import *
 
-class Dictable:
-    """A dataclass that can be converted to a dict."""
-
-    def to_dict(self):
-        """__dict__ doesn't play well with torch.load"""
-        return {k: v for k, v in asdict(self).items()}  # type: ignore
 
 
 # @dataclass
@@ -36,8 +31,7 @@ class SessionDescription(Dictable):
     id: str 
     recording_date: datetime.datetime
     task: Task
-    fields: Dict[Union[RecordingTech, Stimulus, Output], str]
-    trials: List[TrialDescription]
+    trials: List
     # Fields below are automatically filled by the SessionContextManager
     # Do not set them manually.
     splits: Dict[str, List[Tuple[float, float]]] = None # should be filled by register_split() only
