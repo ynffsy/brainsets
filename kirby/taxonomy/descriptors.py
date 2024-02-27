@@ -1,8 +1,7 @@
 import collections
 import dataclasses
 import datetime
-from dataclasses import asdict
-from typing import Dict, List, Tuple, Optional, Union, Any
+from typing import Dict, List, Tuple, Optional, Union
 import numpy as np
 
 from pydantic.dataclasses import dataclass
@@ -11,27 +10,11 @@ from .core import Dictable, StringIntEnum
 from kirby.taxonomy import *
 
 
-
-# @dataclass
-# class ChunkDescription(Dictable):
-#     id: str
-#     duration: float
-#     start_time: float  # Relative to start of trial.
-
-
-# @dataclass
-# class TrialDescription(Dictable):
-#     id: str
-#     footprints: Dict[str, int]
-#     chunks: Dict[str, List[ChunkDescription]]
-
-
 @dataclass
 class SessionDescription(Dictable):
     id: str 
     recording_date: datetime.datetime
     task: Task
-    trials: List
     # Fields below are automatically filled by the SessionContextManager
     # Do not set them manually.
     splits: Dict[str, List[Tuple[float, float]]] = None # should be filled by register_split() only
