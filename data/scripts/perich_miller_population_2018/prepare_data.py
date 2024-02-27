@@ -11,7 +11,7 @@ from scipy.ndimage import binary_dilation, binary_erosion
 from kirby.data import Data, IrregularTimeSeries, Interval, DatasetBuilder
 from kirby.data.dandi_utils import extract_spikes_from_nwbfile, extract_subject_from_nwb
 from kirby.utils import find_files_by_extension
-from kirby.taxonomy import Output, RecordingTech, Task
+from kirby.taxonomy import RecordingTech, Task
 
 logging.basicConfig(level=logging.INFO)
 
@@ -174,10 +174,6 @@ def main():
                 id=session_id,
                 recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
                 task=Task.REACHING,
-                fields={
-                    RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
-                    Output.CURSOR2D: "behavior.cursor_vel",
-                },
             )
 
             # extract spiking activity
@@ -217,11 +213,13 @@ def main():
 
             # split trials into train, validation and test
             successful_trials = trials.select_by_mask(trials.is_valid)
-            train_trials, valid_trials, test_trials = successful_trials.split(
+            _, valid_trials, test_trials = successful_trials.split(
                 [0.7, 0.1, 0.2], shuffle=True, random_seed=42
             )
 
-            session.register_split("train", train_trials)
+            train_sampling_intervals = data.domain.difference((valid_trials | test_trials).dilate(3.0))
+
+            session.register_split("train", train_sampling_intervals)
             session.register_split("valid", valid_trials)
             session.register_split("test", test_trials)
 
