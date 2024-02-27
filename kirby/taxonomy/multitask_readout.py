@@ -56,6 +56,7 @@ decoder_registry = {
         type=OutputType.CONTINUOUS,
         timestamp_key="behavior.timestamps",
         value_key="behavior.hand_vel",
+        subtask_key="behavior.subtask_index",
         loss_fn="mse",
     ),
     str(Decoder.CURSORVELOCITY2D): DecoderSpec(
