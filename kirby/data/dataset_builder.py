@@ -3,14 +3,7 @@ import logging
 import msgpack
 import os
 from pathlib import Path
-import yaml
-from typing import (
-    List,
-    Dict,
-    Optional,
-    Union,
-    Tuple,
-)
+from typing import List, Optional, Union
 
 import h5py
 import numpy as np
@@ -21,38 +14,39 @@ from kirby.taxonomy import (
     SessionDescription,
     SortsetDescription,
     SubjectDescription,
-    TrialDescription,
     to_serializable,
-    Task, RecordingTech, Stimulus, Output, Sex,
+    Task,
+    RecordingTech,
+    Sex,
     Macaque,
 )
 from kirby.utils import make_directory
-from kirby.data import Interval, IrregularTimeSeries, ArrayDict, Data
+from kirby.data import Interval, IrregularTimeSeries, RegularTimeSeries, ArrayDict, Data
 
 
 class DatasetBuilder:
     r"""A class to help build a standardized dataset.
-     
+
     Args:
         raw_folder_path: The path to the raw data folder.
         processed_folder_path: The path to the processed data folder.
         experiment_name: The name of the experiment.
-        origin_version: The version of the data depending on source (dandi version, 
+        origin_version: The version of the data depending on source (dandi version,
             zenodo version, etc). If version is unknown, use "unknown".
         derived_version: The version of the data after processing, this is a unique
             identifier for the processed data, incase you need to have multiple versions
             of the processed data.
-        metadata_version: The version of the metadata, this should be the version of 
-            our package, this will be deprecated and set automatically. Defaults to 
+        metadata_version: The version of the metadata, this should be the version of
+            our package, this will be deprecated and set automatically. Defaults to
             "0.0.2".
-        source: The source of the data. This is the link to the data source (url), if 
+        source: The source of the data. This is the link to the data source (url), if
             the data is not public, add a description of the data source.
         description: A description of the data.
 
     .. code-block:: python
-    
+
             from kirby.data import DatasetBuilder
-    
+
             builder = DatasetBuilder(
                 raw_folder_path="/path/to/raw",
                 processed_folder_path="/path/to/processed",
@@ -63,6 +57,7 @@ class DatasetBuilder:
                 description="This is a description of the data."
             )
     """
+
     def __init__(
         self,
         raw_folder_path: str,
@@ -97,16 +92,16 @@ class DatasetBuilder:
         self.sortsets: List[SortsetDescription] = []
 
     def new_session(self):
-        r"""Start a new :obj:`SessionContextManager`, which will help collect the data 
+        r"""Start a new :obj:`SessionContextManager`, which will help collect the data
         and metadata for a new session.
-        
+
         .. warning::
-            This method should be used as a context manager, so it should be used with 
-            the `with` statement. This is to ensure that the session is properly 
+            This method should be used as a context manager, so it should be used with
+            the `with` statement. This is to ensure that the session is properly
             registered to the dandiset after data collection is complete.
 
             .. code-block:: python
-                
+
                 with builder.new_session() as session:
                     ...
         """
@@ -152,9 +147,9 @@ class DatasetBuilder:
     def finish(self):
         r"""Save the dandiset description to disk. This should be called after all
         sessions have been registered.
-        
+
         .. code-block:: python
-            
+
             builder.finish()
         """
         # Transform sortsets to a list of lists, otherwise it won't serialize to yaml.
@@ -176,7 +171,7 @@ class DatasetBuilder:
         # For efficiency, we also save a msgpack version of the description.
         # Smaller on disk, faster to read.
         filename = Path(self.processed_folder_path) / "description.mpk"
-        print(f"Saving description to {filename}")
+        logging.info(f"Saving description to {filename}")
 
         with open(filename, "wb") as f:
             msgpack.dump(description, f, default=encode_datetime)
@@ -184,6 +179,7 @@ class DatasetBuilder:
 
 class SessionContextManager:
     r"""A context manager to help collect the data and metadata for a new session."""
+
     def __init__(self, builder):
         self.builder: DatasetBuilder = builder
 
@@ -196,7 +192,7 @@ class SessionContextManager:
         return self
 
     def register_subject(
-        self, 
+        self,
         subject: SubjectDescription = None,
         *,
         id: str = None,
@@ -205,15 +201,15 @@ class SessionContextManager:
         sex: Sex = Sex.UNKNOWN,
         genotype: str = "unknown",
     ):
-        """Register subject metadata onto the session context manager.
+        """Register a subject along with its metadata. Either provide an existing
+        :class:`~kirby.taxonomy.SubjectDescription` object as `subject`, or provide the
+        required arguments `id`, `species` and any optional arguments.
 
         Args:
             subject: A :class:`~kirby.taxonomy.SubjectDescription` object containing
                 the subject metadata. Either provide this, or the following arguments.
-            id: A sortset identifier string. Must be unique within the dandiset.
-                Must be provided if `sortset` argument is not provided.
+            id: A subject identifier string. Must be unique within the dandiset.
             species: A string representing the species of the subject.
-                Must be provided if `sortset` argument is not provided.
             age (optional): The age of the subject in days.
             sex (optional): A :class:`~kirby.taxonomy.Sex` enum.
             genotype (optional): A string representing the genotype of the subject.
@@ -250,25 +246,20 @@ class SessionContextManager:
 
     def register_sortset(
         self,
-        sortset: SortsetDescription = None,
-        *,
-        id: str = None,
-        units: List[str],
+        id: str,
+        units: ArrayDict,
         areas: Union[List[StringIntEnum], List[Macaque]] = [],
         recording_tech: List[RecordingTech] = [],
     ):
-        """Register sortset metadata onto the session context manager.
+        """Register a sortset along with its metadata. Will also update the ids of the
+        units inplace (`units.id`) to include the dandiset id and sortset id.
 
         Args:
-            sortset: A :class:`~kirby.taxonomy.SortsetDescription` object.
-                Either provide this, or the following arguments.
             id: A sortset identifier string. Must be unique within the dandiset.
-                Must be provided if `sortset` argument is not provided.
             units: A list of unit identifiers. These unit-ids must be unique within
-                the dandiset. Must always be provided.
-            areas (optional): A list of :class:`~kirby.taxonomy.StringIntEnum` or
-                :class:`~kirby.taxonomy.Macaque` enums.
-            recording_tech (optional): A list of :class:`~kirby.taxonomy.RecordingTech` 
+                the dandiset.
+            areas (optional): A list of :class:`~kirby.taxonomy.StringIntEnum` enums.
+            recording_tech (optional): A list of :class:`~kirby.taxonomy.RecordingTech`
                 enums.
 
         .. code-block:: python
@@ -296,20 +287,14 @@ class SessionContextManager:
             [f"{self.builder.experiment_name}/{id}/{unit_id}" for unit_id in units.id]
         )
 
-        if sortset is None:
-            assert id is not None, "Sortset id must be provided"
-            assert units is not None, "Sortset units must be provided"
-            sortset = SortsetDescription(
-                id=id,
-                subject=self.subject.id if self.subject else "",
-                sessions=[], # will be filled by register_session(...)
-                units=units.id.tolist(),
-                areas=areas,
-                recording_tech=recording_tech,
-            )
-        else:
-            sortset.units = units.id.tolist()
-            sortset.sessions = []
+        sortset = SortsetDescription(
+            id=id,
+            subject=self.subject.id if self.subject else "",
+            sessions=[],  # will be filled by register_session(...)
+            units=units.id.tolist(),
+            areas=areas,
+            recording_tech=recording_tech,
+        )
 
         # Check if the sortset is already registered
         existing_sortset = self.builder.get_sortset(sortset.id)
@@ -320,8 +305,8 @@ class SessionContextManager:
             # If it exists, make sure all the properties match and
             # update the reference
             for key in sortset.as_dict().keys():
-                if (key != "sessions" and  # sessions list is not expected to match
-                    (getattr(existing_sortset, key) != getattr(sortset, key))
+                if key != "sessions" and (  # sessions list is not expected to match
+                    getattr(existing_sortset, key) != getattr(sortset, key)
                 ):
                     raise ValueError(
                         f"Sortset {sortset.id} has already been registered "
@@ -336,34 +321,17 @@ class SessionContextManager:
             self.sortset.sessions.append(self.session)
 
     def register_session(
-        self, 
-        session: SessionDescription = None,
-        *,
-        id: str = None,
-        recording_date: datetime.datetime = None,
-        task: Task = None,
-        fields: Dict[Union[RecordingTech, Stimulus, Output], str] = None,
-        trials: List[TrialDescription] = []
-    ) -> None:
-        """Register session metadata onto the context manager.
+        self,
+        id: str,
+        recording_date: datetime.datetime,
+        task: Task,
+    ):
+        """Register a session along with its metadata.
 
         Args:
-            session: A :class:`~kirby.taxonomy.SessionDescription` object.
-                Either provide this, or the following arguments.
             id: A session identifier string. Must be unique within the dandiset.
-                Must be provided if `session` argument is not provided.
             recording_date: A datetime object representing the date of the recording.
-                Must be provided if `session` argument is not provided.
-            task: A :class:`~kirby.taxonomy.Task` enum
-                Must be provided if `session` argument is not provided.
-            fields: A dictionary mapping 
-                :class:`~kirby.taxonomy.RecordingTech`, 
-                :class:`~kirby.taxonomy.Stimulus`,
-                or :class:`~kirby.taxonomy.Output` enums to strings marking the
-                field names in the data object corresponding to that type of data.
-                Must be provided if `session` argument is not provided.
-            trials (optional): A list of :class:`~kirby.taxonomy.TrialDescription`
-                objects.
+            task: A :class:`~kirby.taxonomy.Task` enum.
 
         .. code-block:: python
 
@@ -371,10 +339,6 @@ class SessionContextManager:
                 id="jenkins_20090928_maze",
                 recording_date=datetime.datetime.strptime("20090928", "%Y%m%d"),
                 task=Task.DISCRETE_REACHING,
-                fields={
-                    RecordingTech.UTAH_ARRAY_SPIKES: "spikes",
-                    Output.CURSOR2D: "behavior.hand_vel",
-                },
             )
 
         """
@@ -384,27 +348,15 @@ class SessionContextManager:
                 "You can only register one session per session context."
             )
 
-        if session is None:
-            assert id is not None, "Session id must be provided"
-            assert recording_date is not None, "Session recording date must be provided"
-            assert task is not None, "Session task must be provided"
-            assert fields is not None, "Session fields must be provided"
-            session = SessionDescription(
-                id=id,
-                recording_date=recording_date,
-                task=task,
-                fields=fields,
-                trials=trials,
-                splits={}, # Will fill in register_split(...)
-                dandiset_id=None, # Will fill in __exit__
-                subject_id=None, # Will fill in __exit__
-                sortset_id=None, # Will fill in __exit__
-            )
-        else:
-            session.splits = {}
-            session.dandiset_id = None
-            session.subject_id = None
-            session.sortset_id = None
+        session = SessionDescription(
+            id=id,
+            recording_date=recording_date,
+            task=task,
+            splits={},  # Will fill in register_split(...)
+            dandiset_id=None,  # Will fill in __exit__
+            subject_id=None,  # Will fill in __exit__
+            sortset_id=None,  # Will fill in __exit__
+        )
 
         # Ensure id is unique within entire dandiset
         for existing_session in self.builder.get_all_sessions():
@@ -414,23 +366,20 @@ class SessionContextManager:
                     f"Session ids must be unique within the entire dandiset."
                 )
 
-        
         self.session = session
 
         # If sortset was defined before session, we need to update the reference
         if self.sortset is not None:
             self.sortset.sessions.append(self.session)
 
-    def register_data(
-        self, 
-        data: Data
-    ):
+    def register_data(self, data: Data):
         """Register a :class:`~kirby.data.Data` object for this session."""
 
-        assert self.data is None, (
-            "A data object was already registered. "
-            "You can only register one data object per session."
-        )
+        if self.data is not None:
+            raise ValueError(
+                "A data object was already registered. "
+                "You can only register one data object per session."
+            )
 
         self.data = data
         self.register_split("full", self.data.domain)
@@ -440,12 +389,19 @@ class SessionContextManager:
         name: str,
         interval: Interval,
     ):
-        """
+        r"""Registers a split. A split is defined by a name and an :obj:`Interval`
+            object that delimits the intervals of the split.
+
         Args:
             name: name of the split, eg. standard names:
                 "train", "test", "valid" (for validation)
             interval: :class:`kirby.data.Interval` object defining the split
         """
+        if self.data is None:
+            raise ValueError(
+                "A data object must be registered before registering splits"
+            )
+
         if self.session is None:
             raise ValueError("A session must be registered before registering splits")
 
@@ -455,12 +411,16 @@ class SessionContextManager:
         if name in self.session.splits:
             raise ValueError(f"Split {name} already exists for this session")
 
-        # Can only handle Interval or list of tuples as split
+        # Can only handle Interval
         if not isinstance(interval, Interval):
-            raise TypeError(f"Cannot handle type {type(interval)}")
+            raise TypeError(f"Cannot handle type {type(interval)}, expected Interval.")
 
         self.session.splits[name] = list(zip(interval.start, interval.end))
-        self.data.add_split_mask(name, interval)
+
+        # flag individual points as belonging to the split
+        # full is skipped since all points belong to full
+        if name != "full":
+            self.data.add_split_mask(name, interval)
 
     def check_no_mask_overlap(self):
         """Performs a check on all split masks inside the data object to ensure
@@ -468,7 +428,7 @@ class SessionContextManager:
         mask_names = [f"{x}_mask" for x in self.session.splits.keys() if x != "full"]
         for obj_key in self.data.keys:
             obj = getattr(self.data, obj_key)
-            if isinstance(obj, (Interval, IrregularTimeSeries)):
+            if isinstance(obj, (Interval, IrregularTimeSeries, RegularTimeSeries)):
                 if isinstance(obj, Interval):
                     if obj._allow_split_mask_overlap:
                         continue
@@ -477,6 +437,7 @@ class SessionContextManager:
                 for mask_name in mask_names:
                     mask = getattr(obj, mask_name)
                     mask_sum += mask.astype(int)
+
                 if np.any(mask_sum > 1):
                     if isinstance(obj, Interval):
                         raise ValueError(
@@ -486,9 +447,7 @@ class SessionContextManager:
                             f"saving session to disk."
                         )
                     else:
-                        raise ValueError(
-                            f"Split mask overlap detected in {obj_key}."
-                        )
+                        raise ValueError(f"Split mask overlap detected in {obj_key}.")
 
     def save_to_disk(self):
         assert self.subject is not None, "A subject must be registered."
@@ -506,10 +465,14 @@ class SessionContextManager:
             logging.error(f"Exception: {exc_type} {exc_value}")
             return False
 
-        assert self.subject is not None, "A subject must be registered."
-        assert self.sortset is not None, "A sortset must be registered."
-        assert self.session is not None, "A session must be registered."
-        assert self.data is not None, "A data object must be registered."
+        if self.subject is None:
+            raise ValueError("A subject must be registered.")
+        if self.sortset is None:
+            raise ValueError("A sortset must be registered.")
+        if self.session is None:
+            raise ValueError("A session must be registered.")
+        if self.data is None:
+            raise ValueError("A data object must be registered.")
 
         self.data.subject_id = self.subject.id
         self.data.session_id = self.session.id

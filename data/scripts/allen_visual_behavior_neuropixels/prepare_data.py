@@ -243,7 +243,6 @@ if __name__ == "__main__":
             session=str(session_id),
             sortset=sortset_id,
             subject=animal,
-            # todo: add probes
         )
 
         # get stimulus epoch blocks

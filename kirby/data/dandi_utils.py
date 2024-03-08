@@ -1,12 +1,7 @@
 import numpy as np
 import pandas as pd
-import torch
 
-from kirby.data import (
-    ArrayDict,
-    Data,
-    IrregularTimeSeries,
-)
+from kirby.data import ArrayDict, IrregularTimeSeries
 
 from kirby.taxonomy import (
     RecordingTech,
@@ -62,7 +57,7 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
             unit_id = f"group_{group_name}/elec{electrode_id}/unit_{i}"
         else:
             raise ValueError(f"Recording tech {recording_tech} not supported")
-        
+
         # extract spikes
         spiketimes = units[i]
         timestamps.append(spiketimes)
@@ -78,10 +73,12 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
             }
         )
 
-
     # convert unit metadata to a Data object
-    unit_meta_df = pd.DataFrame(unit_meta) # list of dicts to dataframe
-    units = ArrayDict.from_dataframe(unit_meta_df, unsigned_to_long=True,)
+    unit_meta_df = pd.DataFrame(unit_meta)  # list of dicts to dataframe
+    units = ArrayDict.from_dataframe(
+        unit_meta_df,
+        unsigned_to_long=True,
+    )
 
     # concatenate spikes
     timestamps = np.concatenate(timestamps)

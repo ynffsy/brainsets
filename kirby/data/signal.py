@@ -1,18 +1,17 @@
+"""Signal processing functions. Inspired by Stavisky et al. (2015).
+
+https://dx.doi.org/10.1088/1741-2560/12/3/036009
+"""
+
 from typing import List, Tuple
 
 import numpy as np
 import torch
-import torchtyping
 import tqdm
 from scipy import signal
 
 from kirby.data import Data, IrregularTimeSeries
 from kirby.taxonomy import RecordingTech
-
-"""Signal processing functions. Inspired by Stavisky et al. (2015).
-
-https://dx.doi.org/10.1088/1741-2560/12/3/036009
-"""
 
 
 def downsample_wideband(

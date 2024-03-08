@@ -30,6 +30,18 @@ module allen_visual_behavior_neuropixels_module:
 use rule * from allen_visual_behavior_neuropixels_module as allen_visual_behavior_neuropixels_*
 use rule all from allen_visual_behavior_neuropixels_module as allen_visual_behavior_neuropixels
 
+module gillon_richards_responses_2023_module:
+    snakefile: "data/scripts/gillon_richards_responses_2023/Snakefile"
+    config: config
+use rule * from gillon_richards_responses_2023_module as gillon_richards_responses_2023_*
+use rule all from gillon_richards_responses_2023_module as gillon_richards_responses_2023
+
+module allen_brain_observatory_calcium_module:
+    snakefile: "data/scripts/allen_brain_observatory_calcium/Snakefile"
+    config: config
+use rule * from allen_brain_observatory_calcium_module as allen_brain_observatory_calcium_*
+use rule all from allen_brain_observatory_calcium_module as allen_brain_observatory_calcium
+
 module perich_miller_population_2018_module:
     snakefile: "data/scripts/perich_miller_population_2018/Snakefile"
     config: config
