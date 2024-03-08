@@ -19,6 +19,9 @@ class RecordingTech(StringIntEnum):
     # As a subordinate category
     NEUROPIXELS_ARRAY = 19
 
+    OPENSCOPE_CALCIUM_TRACES = 20
+    OPENSCOPE_CALCIUM_RAW = 21
+
     ECOG_ARRAY_ECOGS = 29
 
 

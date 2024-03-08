@@ -31,6 +31,12 @@ class Decoder(StringIntEnum):
 
     # Allen data
     DRIFTING_GRATINGS = 13
+    DRIFTING_GRATINGS_TEMP_FREQ = 23
+
+    # Openscope calcium
+    UNEXPECTED_OR_NOT = 20  #
+    GABOR_ORIENTATION = 21  #
+    PUPIL_MOVEMENT_REGRESSION = 22
 
     # speech
     SPEAKING_CVSYLLABLE = 14
@@ -103,6 +109,15 @@ decoder_registry = {
         value_key="stimuli_segments.drifting_class",
         loss_fn="bce",
     ),
+    str(Decoder.DRIFTING_GRATINGS_TEMP_FREQ): DecoderSpec(
+        dim=5,  # [1,2,4,8,15]
+        target_dim=1,
+        target_dtype="long",
+        type=OutputType.MULTINOMIAL,
+        timestamp_key="stimuli_segments.timestamps",
+        value_key="stimuli_segments.drifting_temp_freq",
+        loss_fn="bce",
+    ),
     # str(Decoder.SPEAKING_CVSYLLABLE): DecoderSpec(
     #     dim=len(CVSyllable),  # empty label is included
     #     target_dim=1,
@@ -112,4 +127,13 @@ decoder_registry = {
     #     value_key="speech.consonant_vowel_syllables",
     #     loss_fn="bce",
     # ),
+    str(Decoder.GABOR_ORIENTATION): DecoderSpec(
+        dim=4,  # [0, 1, 2, 3]
+        target_dim=1,
+        target_dtype="long",
+        type=OutputType.MULTINOMIAL,
+        timestamp_key="gabor_trials.timestamps",
+        value_key="gabor_trials.gabor_orientation",
+        loss_fn="bce",
+    ),
 }
