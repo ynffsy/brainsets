@@ -23,9 +23,7 @@ def downsample_wideband(
     """
     Downsample wideband signal to LFP sampling rate.
     """
-    assert (
-        wideband.shape[0] == timestamps.shape[0]
-    ), "Time should be first dimension."
+    assert wideband.shape[0] == timestamps.shape[0], "Time should be first dimension."
     # Decimate by a factor of 4
     dec_factor = 4
     if wideband.shape[0] % dec_factor != 0:
@@ -39,9 +37,7 @@ def downsample_wideband(
     nyq = 0.5 * wideband_Fs / dec_factor  # Nyquist frequency
     cutoff = 0.333 * lfp_Fs  # remove everything above 170 Hz.
     normal_cutoff = cutoff / nyq
-    b, a = signal.butter(
-        4, normal_cutoff, btype="low", analog=False, output="ba"
-    )
+    b, a = signal.butter(4, normal_cutoff, btype="low", analog=False, output="ba")
 
     # Interpolation to achieve the desired sampling rate
     t_new = np.arange(timestamps[0], timestamps[-1], 1 / lfp_Fs)
@@ -84,9 +80,7 @@ def extract_bands(
     band_names = ["delta", "theta", "alpha", "beta", "gamma", "lmp"]
     bands = [(1, 4), (3, 10), (12, 23), (27, 38), (50, 300)]
     for band_low, band_hi in bands:
-        band = data.copy().filter(
-            band_low, band_hi, fir_design="firwin", n_jobs=4
-        )
+        band = data.copy().filter(band_low, band_hi, fir_design="firwin", n_jobs=4)
         band = band.apply_function(lambda x: x**2, n_jobs=4)
 
         band = band.filter(18, None, fir_design="firwin", n_jobs=4)
@@ -158,12 +152,13 @@ def cube_to_long(
     counts = cube.sum(axis=0).sum(axis=0)
     units = ArrayDict(
         count=np.array(counts.astype(int)),
-        channel_name=np.array([f"{channel_prefix}{c:03}" for c in range(cube.shape[2])]),
+        channel_name=np.array(
+            [f"{channel_prefix}{c:03}" for c in range(cube.shape[2])]
+        ),
         unit_number=np.zeros(cube.shape[2]),
         id=np.array([f"{channel_prefix}{c}" for c in range(cube.shape[2])]),
         channel_number=np.arange(cube.shape[2]),
-        type=np.ones(cube.shape[2])
-        * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
+        type=np.ones(cube.shape[2]) * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
     )
 
     return trials, units

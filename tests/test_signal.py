@@ -10,6 +10,7 @@ def test_extract_bands():
     assert ts.size == bands.shape[0]
     assert bands.shape[2] == len(band_names)
 
+
 def test_cube_to_long():
     ts = np.arange(10).astype(float)
     cube = np.zeros((1, 10, 2), dtype=int)

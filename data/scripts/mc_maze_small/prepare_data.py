@@ -1,4 +1,5 @@
 """Load data, processes it, save it."""
+
 import argparse
 import datetime
 import logging
@@ -42,8 +43,10 @@ def extract_trials(nwbfile):
     train_mask_nwb = trial_table.split_indicator.to_numpy() == "train"
     test_mask_nwb = trial_table.split_indicator.to_numpy() == "val"
 
-    trials.train_mask_nwb = train_mask_nwb # Naming with "_" since train_mask is reserved 
-    trials.test_mask_nwb = test_mask_nwb # Naming with "_" since test_mask is reserved
+    trials.train_mask_nwb = (
+        train_mask_nwb  # Naming with "_" since train_mask is reserved
+    )
+    trials.test_mask_nwb = test_mask_nwb  # Naming with "_" since test_mask is reserved
 
     return trials
 
@@ -199,11 +202,9 @@ def main():
             session.register_data(data)
 
             # split and register trials into train, validation and test
-            train_trials, valid_trials = (
-                trials
-                .select_by_mask(trials.train_mask_nwb)
-                .split([0.8, 0.2], shuffle=True, random_seed=42)
-            )
+            train_trials, valid_trials = trials.select_by_mask(
+                trials.train_mask_nwb
+            ).split([0.8, 0.2], shuffle=True, random_seed=42)
             test_trials = trials.select_by_mask(trials.test_mask_nwb)
 
             session.register_split("train", train_trials)

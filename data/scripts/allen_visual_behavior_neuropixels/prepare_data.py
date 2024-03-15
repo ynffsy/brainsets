@@ -1,4 +1,5 @@
 """Load data, processes it, delete un-needed attributes, save into sample chuncks."""
+
 import argparse
 import collections
 import datetime
@@ -78,7 +79,7 @@ def extract_spikes(units, prefix):
     types = np.concatenate(types)
 
     # convert unit metadata to a Data object
-    unit_meta_df = pd.DataFrame(unit_meta) # list of dicts to dataframe
+    unit_meta_df = pd.DataFrame(unit_meta)  # list of dicts to dataframe
     units = ArrayDict.from_dataframe(unit_meta_df, unsigned_to_long=True)
 
     sorted = np.argsort(spikes)

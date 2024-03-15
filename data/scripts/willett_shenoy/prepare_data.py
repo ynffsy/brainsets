@@ -121,7 +121,6 @@ def process_single_letters(
 
     print(f"Number of distinct characters: {nchars}")
     print(f"Number of repeats per character: {len(train_mask)}")
-    
 
     labels = np.stack(labels, axis=1).ravel()
     train_masks = np.stack(train_masks, axis=1).ravel()
@@ -131,7 +130,7 @@ def process_single_letters(
     # Did we do the split the right way around? Double check.
     # If we did the split the wrong way around, we should switch rapidly between train
     # and test folds (fold is fast dim, character is slow dim).
-    # This will make it easier to e.g. use exactly one trial per character for 
+    # This will make it easier to e.g. use exactly one trial per character for
     # calibration.
     assert abs(np.diff(1 * train_masks)).sum() < 20
 
@@ -143,23 +142,17 @@ def process_single_letters(
 
     assert len(test_masks) == len(labels)
 
-    folds = np.where(
-        train_masks, "train", np.where(valid_masks, "valid", "test")
-    )
+    folds = np.where(train_masks, "train", np.where(valid_masks, "valid", "test"))
 
     assert spike_cubes.shape[0] == len(test_masks)
 
     # We only select 1.6 seconds, from -.3 to 1.3 seconds, where the go period is from
     # 0 to 1 seconds.
     spike_cubes = spike_cubes[:, 59:, :]
-    ts = (
-        np.arange(0.5, 0.5 + spike_cubes.shape[1]) / 100.0
-    )  # 100 Hz sampling rate
+    ts = np.arange(0.5, 0.5 + spike_cubes.shape[1]) / 100.0  # 100 Hz sampling rate
 
     channel_prefix = f"{sortset_name}/channel_"
-    trials, units = signal.cube_to_long(
-        ts, spike_cubes, channel_prefix=channel_prefix
-    )
+    trials, units = signal.cube_to_long(ts, spike_cubes, channel_prefix=channel_prefix)
 
     # TODO: use the geometry map.
     counters = collections.defaultdict(int)
@@ -216,9 +209,7 @@ def process_single_letters(
     # Double check that the frequencies are balanced.
     char_counts = {}
     for fold in ["train", "valid", "test"]:
-        _, char_counts[fold] = np.unique(
-            np.array(letters[fold]), return_counts=True
-        )
+        _, char_counts[fold] = np.unique(np.array(letters[fold]), return_counts=True)
 
     npt.assert_allclose(
         char_counts["train"] / char_counts["train"].sum(),
@@ -246,7 +237,7 @@ def process_single_letters(
         fields={
             RecordingTech.UTAH_ARRAY: "spikes",
             output: "stimuli_segments.letters",
-            },
+        },
         trials=trial_descriptions,
     )
 
@@ -259,9 +250,7 @@ def load_straight_lines(session_path):
 
     # Spikes data structure to hold neuralActivityCube
     spikes = {}
-    spikes["neural_activity_cubes"] = straight_lines_data.get(
-        "neuralActivityCube_{x}"
-    )
+    spikes["neural_activity_cubes"] = straight_lines_data.get("neuralActivityCube_{x}")
     spikes["neural_activity_time_series"] = straight_lines_data.get(
         "neuralActivityTimeSeries"
     )
@@ -269,12 +258,8 @@ def load_straight_lines(session_path):
     # Behaviour data structure to hold different behavioral aspects
     behaviour = {}
     behaviour["clock_time_series"] = straight_lines_data.get("clockTimeSeries")
-    behaviour["block_nums_time_series"] = straight_lines_data.get(
-        "blockNumsTimeSeries"
-    )
-    behaviour["go_cue_onset_time_bin"] = straight_lines_data.get(
-        "goCueOnsetTimeBin"
-    )
+    behaviour["block_nums_time_series"] = straight_lines_data.get("blockNumsTimeSeries")
+    behaviour["go_cue_onset_time_bin"] = straight_lines_data.get("goCueOnsetTimeBin")
     behaviour["delay_cue_onset_time_bin"] = straight_lines_data.get(
         "delayCueOnsetTimeBin"
     )
@@ -282,9 +267,7 @@ def load_straight_lines(session_path):
     # Outputs data structure to hold output details
     outputs = {}
     outputs["means_per_block"] = straight_lines_data.get("meansPerBlock")
-    outputs["std_across_all_data"] = straight_lines_data.get(
-        "stdAcrossAllData"
-    )
+    outputs["std_across_all_data"] = straight_lines_data.get("stdAcrossAllData")
     outputs["array_geometry_map"] = straight_lines_data.get("arrayGeometryMap")
 
     return spikes, behaviour, outputs
@@ -308,9 +291,7 @@ if __name__ == "__main__":
 
     files = sorted(
         list((Path(raw_folder_path) / "Datasets").glob("*/singleLetters.mat"))
-        + list(
-            (Path(raw_folder_path) / "Datasets").glob("*/straightLines.mat")
-        )
+        + list((Path(raw_folder_path) / "Datasets").glob("*/straightLines.mat"))
     )
 
     for file in files:

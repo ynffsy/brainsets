@@ -1,5 +1,6 @@
 from .core import StringIntEnum
 
+
 # from a standard atlas https://github.com/neurodata/neuroparc/blob/master/atlases/label/Human/Anatomical-labels-csv/Glasser.csv
 # with a few custmized region
 class HomoSapiens(StringIntEnum):
@@ -182,6 +183,6 @@ class HomoSapiens(StringIntEnum):
     area_te1_middle = 176
     parainsular_area = 177
     area_anterior_32_prime = 178
-    
-    # customized 
+
+    # customized
     ventral_sensorimotor_cortex = 179

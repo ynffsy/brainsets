@@ -2,7 +2,7 @@ from .core import StringIntEnum
 
 
 class Cre_line(StringIntEnum):
-    '''
+    """
     ['Cux2-CreERT2',
     'Emx1-IRES-Cre',
     'Fezf2-CreER',
@@ -15,7 +15,8 @@ class Cre_line(StringIntEnum):
     'Slc17a7-IRES2-Cre',
     'Sst-IRES-Cre',
     'Tlx3-Cre_PL56',
-    'Vip-IRES-Cre']'''
+    'Vip-IRES-Cre']"""
+
     CUX2_CREERT2 = 0
     EXM1_IRES_CRE = 1
     FEZF2_CREER = 2

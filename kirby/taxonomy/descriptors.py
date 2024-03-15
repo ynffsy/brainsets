@@ -12,12 +12,14 @@ from kirby.taxonomy import *
 
 @dataclass
 class SessionDescription(Dictable):
-    id: str 
+    id: str
     recording_date: datetime.datetime
     task: Task
     # Fields below are automatically filled by the SessionContextManager
     # Do not set them manually.
-    splits: Dict[str, List[Tuple[float, float]]] = None # should be filled by register_split() only
+    splits: Dict[str, List[Tuple[float, float]]] = (
+        None  # should be filled by register_split() only
+    )
     dandiset_id: Optional[str] = None
     subject_id: Optional[str] = None
     sortset_id: Optional[str] = None
@@ -32,7 +34,9 @@ class SortsetDescription(Dictable):
     recording_tech: List[RecordingTech]
     # Fields below are automatically filled by the SessionContextManager
     # Do not set them manually.
-    sessions: List[SessionDescription] = None # should be filled by register_session() only
+    sessions: List[SessionDescription] = (
+        None  # should be filled by register_session() only
+    )
 
 
 @dataclass
@@ -63,10 +67,7 @@ def to_serializable(dct):
     if isinstance(dct, list) or isinstance(dct, tuple):
         return [to_serializable(x) for x in dct]
     elif isinstance(dct, dict) or isinstance(dct, collections.defaultdict):
-        return {
-            to_serializable(x): to_serializable(y)
-            for x, y in dict(dct).items()
-        }
+        return {to_serializable(x): to_serializable(y) for x, y in dict(dct).items()}
     elif isinstance(dct, Dictable):
         return {
             x.name: to_serializable(getattr(dct, x.name))

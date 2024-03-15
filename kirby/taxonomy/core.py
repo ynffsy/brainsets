@@ -21,7 +21,7 @@ class NestedEnumType(type(Enum)):
 
 class StringIntEnum(Enum, metaclass=NestedEnumType):
     """Enum where the value is a string, but can be cast to an int."""
-    
+
     def __str__(self):
         if self._parent is not None:
             return f"{str(self._parent)}.{self.name}"

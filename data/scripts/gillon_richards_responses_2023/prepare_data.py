@@ -33,7 +33,9 @@ def extract_calcium_traces(ophys):
     calcium_traces = RegularTimeSeries(
         df_over_f=roi_traces.data[:],  # dim (frames x curr_num_roi)
         sampling_rate=sampling_rate,
-        domain=Interval(timestamps[0], timestamps[0] + (len(timestamps) - 1) / sampling_rate),
+        domain=Interval(
+            timestamps[0], timestamps[0] + (len(timestamps) - 1) / sampling_rate
+        ),
     )
 
     return calcium_traces

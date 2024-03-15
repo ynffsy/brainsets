@@ -217,7 +217,9 @@ def main():
                 [0.7, 0.1, 0.2], shuffle=True, random_seed=42
             )
 
-            train_sampling_intervals = data.domain.difference((valid_trials | test_trials).dilate(3.0))
+            train_sampling_intervals = data.domain.difference(
+                (valid_trials | test_trials).dilate(3.0)
+            )
 
             session.register_split("train", train_sampling_intervals)
             session.register_split("valid", valid_trials)

@@ -1,4 +1,5 @@
 """Load data, processes it, save it."""
+
 import argparse
 import datetime
 import logging
@@ -38,9 +39,7 @@ def extract_trials(nwbfile):
     )
     trials = Interval.from_dataframe(trial_table)
 
-    is_valid = np.logical_and(
-        trials.discard_trial == 0.0, trials.task_success == 1.0
-    )
+    is_valid = np.logical_and(trials.discard_trial == 0.0, trials.task_success == 1.0)
     trials.is_valid = is_valid
 
     return trials

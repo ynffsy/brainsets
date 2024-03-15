@@ -65,9 +65,7 @@ def process_single_letters(
 
     assert len(test_masks) == len(labels)
 
-    folds = np.where(
-        train_masks, "train", np.where(valid_masks, "valid", "test")
-    )
+    folds = np.where(train_masks, "train", np.where(valid_masks, "valid", "test"))
 
     spike_cubes = np.concatenate(spike_cubes, axis=0)
 
@@ -81,9 +79,7 @@ def smooth_spikes(spike_cubes, sigma=3):
     assert spike_cubes.shape[1] == 201
     kernel = signal.windows.gaussian(7 * sigma, sigma)
     kernel /= kernel.sum()
-    smoothed_spikes = signal.convolve(
-        spike_cubes, kernel.reshape((1, -1, 1)), "same"
-    )
+    smoothed_spikes = signal.convolve(spike_cubes, kernel.reshape((1, -1, 1)), "same")
     return smoothed_spikes
 
 
@@ -99,9 +95,7 @@ def pca_spikes(avg_spikes, smoothed_spikes, n_components=15):
     return Y
 
 
-def knn_classification(
-    X, labels, train_masks, valid_masks, test_masks, tuned=True
-):
+def knn_classification(X, labels, train_masks, valid_masks, test_masks, tuned=True):
     X_train = X[train_masks]
     y_train = labels[train_masks]
 
@@ -176,9 +170,7 @@ def main():
     )
     files = sorted(
         list((Path(raw_folder_path) / "Datasets").glob("*/singleLetters.mat"))
-        + list(
-            (Path(raw_folder_path) / "Datasets").glob("*/straightLines.mat")
-        )
+        + list((Path(raw_folder_path) / "Datasets").glob("*/straightLines.mat"))
     )
 
     all_results = []
@@ -194,8 +186,8 @@ def main():
                 folds,
             ) = process_single_letters(file)
 
-            # Here, spike_cubes has trials x timepoints x neurons as dimensions. The 
-            # time bins are 10 ms. We smooth the spikes temporally with a Gaussian 
+            # Here, spike_cubes has trials x timepoints x neurons as dimensions. The
+            # time bins are 10 ms. We smooth the spikes temporally with a Gaussian
             # kernel of 30 ms
             smoothed_spikes = smooth_spikes(spike_cubes, 3)[:, 21:181, :]
 

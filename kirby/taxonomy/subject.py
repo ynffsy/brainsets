@@ -13,6 +13,7 @@ class Sex(StringIntEnum):
     r"""Follows the DANDI definition of sex.
     [Link](https://www.dandiarchive.org/handbook/135_validation/#missing-dandi-metadata)
     """
+
     UNKNOWN = U = 0
     MALE = M = 1
     FEMALE = F = 2

@@ -20,6 +20,7 @@ class Task(StringIntEnum):
 
 class REACHING(StringIntEnum, parent=Task.REACHING):
     """A classic BCI task involving reaching to a 2d target."""
+
     RANDOM = 0
     HOLD = 1
     REACH = 2
@@ -38,4 +39,3 @@ class Stimulus(StringIntEnum):
     TARGETACQ = 3
 
     DRIFTING_GRATINGS = 4
-
