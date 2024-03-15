@@ -188,8 +188,19 @@ class SessionContextManager:
         self.session: Optional[SessionDescription] = None
         self.data: Optional[Data] = None
 
+        self._is_in_context = False
+
     def __enter__(self):
+        self._is_in_context = True
         return self
+
+    def _verify_in_context(self):
+        if not self._is_in_context:
+            raise ValueError(
+                "SessionContextManager must be used as a context manager. Try using "
+                "'with builder.new_session() as session: ...' instead of 'session = "
+                "builder.new_session()'"
+            )
 
     def register_subject(
         self,
@@ -221,6 +232,7 @@ class SessionContextManager:
 
         """
 
+        self._verify_in_context()
         if self.subject is not None:
             raise ValueError(
                 "A subject was already registered. A session can only have "
@@ -276,6 +288,7 @@ class SessionContextManager:
 
         """
 
+        self._verify_in_context()
         if self.sortset is not None:
             raise ValueError(
                 "A sortset was already registered. A session can only have "
@@ -339,6 +352,11 @@ class SessionContextManager:
                 id="jenkins_20090928_maze",
                 recording_date=datetime.datetime.strptime("20090928", "%Y%m%d"),
                 task=Task.DISCRETE_REACHING,
+        self._verify_in_context()
+        if self.session is not None:
+            raise ValueError(
+                "A session description was already registered. A session "
+                "can only have one description."
             )
 
         """
@@ -381,6 +399,8 @@ class SessionContextManager:
                 "You can only register one data object per session."
             )
 
+    def register_data(self, data):
+        self._verify_in_context()
         self.data = data
         self.register_split("full", self.data.domain)
 
@@ -397,6 +417,8 @@ class SessionContextManager:
                 "train", "test", "valid" (for validation)
             interval: :class:`kirby.data.Interval` object defining the split
         """
+        self._verify_in_context()
+
         if self.data is None:
             raise ValueError(
                 "A data object must be registered before registering splits"
@@ -425,6 +447,7 @@ class SessionContextManager:
     def check_no_mask_overlap(self):
         """Performs a check on all split masks inside the data object to ensure
         there is no overlap across splits. Raises an error if there is overlap"""
+        self._verify_in_context()
         mask_names = [f"{x}_mask" for x in self.session.splits.keys() if x != "full"]
         for obj_key in self.data.keys:
             obj = getattr(self.data, obj_key)
@@ -450,6 +473,7 @@ class SessionContextManager:
                         raise ValueError(f"Split mask overlap detected in {obj_key}.")
 
     def save_to_disk(self):
+        self._verify_in_context()
         assert self.subject is not None, "A subject must be registered."
         assert self.sortset is not None, "A sortset must be registered."
         assert self.session is not None, "A session must be registered."
@@ -503,6 +527,7 @@ class SessionContextManager:
         if not self.builder.is_sortset_already_registered(self.sortset.id):
             self.builder.sortsets.append(self.sortset)
 
+        self._is_in_context = False
         return True
 
 
