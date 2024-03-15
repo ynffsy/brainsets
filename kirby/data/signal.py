@@ -10,7 +10,7 @@ import torch
 import tqdm
 from scipy import signal
 
-from kirby.data import Data, IrregularTimeSeries
+from kirby.data import Data, IrregularTimeSeries, ArrayDict
 from kirby.taxonomy import RecordingTech
 
 
@@ -151,17 +151,18 @@ def cube_to_long(
                 unit_index=channels_,
                 types=np.ones(len(ts_))
                 * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
+                domain="auto",
             )
         )
 
     counts = cube.sum(axis=0).sum(axis=0)
-    units = Data(
-        count=torch.Tensor(counts.astype(int)),
-        channel_name=[f"{channel_prefix}{c:03}" for c in range(cube.shape[2])],
-        unit_number=torch.zeros(cube.shape[2]),
-        id=[f"{channel_prefix}{c}" for c in range(cube.shape[2])],
-        channel_number=torch.arange(cube.shape[2]),
-        type=torch.ones(cube.shape[2])
+    units = ArrayDict(
+        count=np.array(counts.astype(int)),
+        channel_name=np.array([f"{channel_prefix}{c:03}" for c in range(cube.shape[2])]),
+        unit_number=np.zeros(cube.shape[2]),
+        id=np.array([f"{channel_prefix}{c}" for c in range(cube.shape[2])]),
+        channel_number=np.arange(cube.shape[2]),
+        type=np.ones(cube.shape[2])
         * int(RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS),
     )
 
