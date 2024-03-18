@@ -26,9 +26,14 @@ def extract_subject_from_nwb(nwbfile):
     sex: must be "M", "F", "O" (other), or "U" (unknown).
     date_of_birth or age: this does not appear to be enforced, so will be skipped.
     """
+    species = nwbfile.subject.species
+
+    if "NCBITaxon" in species:
+        species = "NCBITaxon_" + species.split("_")[-1]
+
     return SubjectDescription(
         id=nwbfile.subject.subject_id.lower(),
-        species=Species.from_string(nwbfile.subject.species),
+        species=Species.from_string(species),
         sex=Sex.from_string(nwbfile.subject.sex),
     )
 

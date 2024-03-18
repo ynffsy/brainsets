@@ -1,5 +1,3 @@
-"""Load data, processes it, save it."""
-
 import argparse
 import datetime
 import logging

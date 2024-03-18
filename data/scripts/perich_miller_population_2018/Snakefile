@@ -3,6 +3,9 @@
 ######################################################
 
 DATASET = "perich_miller_population_2018"
+DANDI_ID = "000688"
+# use one file to check if data is downloaded
+FILENAME = "sub-T/sub-T_ses-RT-20130910_behavior+ecephys.nwb"
 
 RAW_DIR = config["RAW_DIR"]
 PROCESSED_DIR = config["PROCESSED_DIR"]
@@ -12,16 +15,18 @@ rule all:
         f"{PROCESSED_DIR}/{DATASET}/description.mpk"
 
 rule download_data:
-    output: f"{RAW_DIR}/{DATASET}/ReachingData/Chewie_20131003_CO_VR_BL_001_stripped.mat",
+    output:
+        nwb_file = f"{RAW_DIR}/{DATASET}/{DANDI_ID}/{FILENAME}"
     shell:
         f"""
-        raise error "You must download the data manually from https://www.dropbox.com/home/Project%20Kirby"
+        mkdir -p {RAW_DIR}/{DATASET}
+        dandi download -o {RAW_DIR}/{DATASET} -e refresh DANDI:000688/draft
         """
 
 rule prepare_data:
     input:
         py_script = f"data/scripts/{DATASET}/prepare_data.py",
-        mat_files = f"{RAW_DIR}/{DATASET}/ReachingData/Chewie_20131003_CO_VR_BL_001_stripped.mat",
+        nwb_file = f"{RAW_DIR}/{DATASET}/{DANDI_ID}/{FILENAME}"
     output:
         description = f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     log:

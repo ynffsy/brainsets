@@ -6,7 +6,7 @@ class Species(StringIntEnum):
     MACACA_MULATTA = 1
     HOMO_SAPIENS = HUMAN = 2
     MUS_MUSCULUS = 3
-    MACACA_FASCICULARIS = 4
+    MACACA_FASCICULARIS = NCBITaxon_9541 = 4
 
 
 class Sex(StringIntEnum):
