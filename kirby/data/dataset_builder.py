@@ -317,7 +317,7 @@ class SessionContextManager:
         else:
             # If it exists, make sure all the properties match and
             # update the reference
-            for key in sortset.as_dict().keys():
+            for key in sortset.to_dict().keys():
                 if key != "sessions" and (  # sessions list is not expected to match
                     getattr(existing_sortset, key) != getattr(sortset, key)
                 ):
@@ -514,7 +514,7 @@ class SessionContextManager:
         else:
             existing_subject = self.builder.get_subject(self.subject.id)
             # todo: there is a bug here, we need to check if the subject is already
-            # for key in self.subject.as_dict().keys():
+            # for key in self.subject.to_dict().keys():
             #     if (getattr(existing_subject, key) != getattr(self.subject, key)):
             #         raise ValueError(
             #             f"Subject {self.subject.id} has already been registered "

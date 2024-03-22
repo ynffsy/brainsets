@@ -1,4 +1,5 @@
 from enum import Enum
+from dataclasses import asdict
 
 
 class NestedEnumType(type(Enum)):
