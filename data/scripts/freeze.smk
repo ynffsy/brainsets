@@ -14,14 +14,9 @@ rule freeze:
         # Single lz4 archive.
         echo "Compressing"
         cd {PROCESSED_DIR}/{DATASET} && \
-            tar -cf - . | lz4 -1 > {COMPRESSED_DIR}/{DATASET}/dataset.tar.lz4
+            tar -cf - --exclude=description.mpk . | lz4 -1 > {COMPRESSED_DIR}/{DATASET}/dataset.tar.lz4
         cd - > /dev/null
-        echo "Splitting into shards"
         pwd
-
-            # Multiple shards for webdataset usage.
-            # python split_and_tar.py --input_dir {PROCESSED_DIR}/{DATASET}/ --output_dir {COMPRESSED_DIR}/{DATASET}
-        done
         cp {{input.description}} {COMPRESSED_DIR}/{DATASET}/description.mpk
         """
 
@@ -36,7 +31,6 @@ rule unfreeze:
         # Uncompress and untar the data.
         mkdir -p {UNCOMPRESSED_DIR}/{DATASET}/
         lz4 -d -c {COMPRESSED_DIR}/{DATASET}/dataset.tar.lz4 | tar -xf - -C {UNCOMPRESSED_DIR}/{DATASET}/
-        done
         cp {{input.desc_in}} {UNCOMPRESSED_DIR}/{DATASET}/description.mpk
         touch {{output.unfreeze_out}}
         """
