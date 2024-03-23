@@ -54,11 +54,11 @@ module willett_shenoy_module:
 use rule * from willett_shenoy_module as willett_shenoy_*
 use rule all from willett_shenoy_module as willett_shenoy
 
-module odoherty_sabes_module:
-    snakefile: "data/scripts/odoherty_sabes/Snakefile"
+module odoherty_sabes_nonhuman_2017_module:
+    snakefile: "data/scripts/odoherty_sabes_nonhuman_2017/Snakefile"
     config: config
-use rule * from odoherty_sabes_module as odoherty_sabes_*
-use rule all from odoherty_sabes_module as odoherty_sabes
+use rule * from odoherty_sabes_nonhuman_2017_module as odoherty_sabes_nonhuman_2017_*
+use rule all from odoherty_sabes_nonhuman_2017_module as odoherty_sabes_nonhuman_2017
 
 module churchland_shenoy_module:
     snakefile: "data/scripts/churchland_shenoy/Snakefile"
@@ -83,4 +83,4 @@ use rule all from bouchard_chang_module as bouchard_chang
 rule poyo_neurips:
     input:
         perich_miller_population_2018_module.rules.all.input,
-        odoherty_sabes_module.rules.all.input,
+        odoherty_sabes_nonhuman_2017_module.rules.all.input,

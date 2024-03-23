@@ -2,7 +2,7 @@
 # O'Doherty & Sabes (2017) 
 ######################################################
 
-DATASET = "odoherty_sabes"
+DATASET = "odoherty_sabes_nonhuman_2017"
 
 RAW_DIR = config["RAW_DIR"]
 PROCESSED_DIR = config["PROCESSED_DIR"]
