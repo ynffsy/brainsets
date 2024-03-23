@@ -1,5 +1,3 @@
-"""Load data, processes it, save it."""
-
 import argparse
 import datetime
 import logging
@@ -13,10 +11,8 @@ from kirby.data.dandi_utils import (
     extract_spikes_from_nwbfile,
     extract_subject_from_nwb,
 )
-from kirby.tasks.reaching import REACHING
 from kirby.utils import find_files_by_extension
 from kirby.taxonomy import (
-    Output,
     RecordingTech,
     Task,
 )
@@ -37,9 +33,33 @@ def extract_trials(nwbfile):
             "target_presentation_time": "target_on_time",
         }
     )
-    trials = Interval.from_dataframe(trial_table)
 
+    # some sessions seem to have an incorrect trial table
+    # TODO investigate
+    index = np.where(
+        (trial_table.start.to_numpy()[1:] - trial_table.start.to_numpy()[:-1]) < 0
+    )[0]
+    if len(index) > 0:
+        logging.warning(
+            f"Found {len(index) + 1} non contiguous blocks of trials in the "
+            f"trial table. Truncating the table to the first contiguous block."
+        )
+        trial_table = trial_table.iloc[: index[0] + 1]
+
+    trials = Interval.from_dataframe(trial_table)
     is_valid = np.logical_and(trials.discard_trial == 0.0, trials.task_success == 1.0)
+
+    # for some reason some trials are overlapping, we will flag them as invalid
+    overlapping_mask = np.zeros_like(is_valid, dtype=bool)
+    overlapping_mask[1:] = trials.start[1:] < trials.end[:-1]
+    overlapping_mask[:-1] = np.logical_or(overlapping_mask[:-1], overlapping_mask[1:])
+    if np.any(overlapping_mask):
+        logging.warning(
+            f"Found {np.sum(overlapping_mask)} overlapping trials. "
+            f"Marking them as invalid."
+        )
+    is_valid[overlapping_mask] = False
+
     trials.is_valid = is_valid
 
     return trials
@@ -54,6 +74,7 @@ def extract_behavior(nwbfile, trials):
         depending on the sequence. # todo investigate more
     """
     # cursor, hand and eye share the same timestamps (verified)
+    # TODO what's the difference between hand and cursor?
     timestamps = nwbfile.processing["behavior"]["Position"]["Cursor"].timestamps[:]
     cursor_pos = nwbfile.processing["behavior"]["Position"]["Cursor"].data[:]  # 2d
     hand_pos = nwbfile.processing["behavior"]["Position"]["Hand"].data[:]
@@ -70,21 +91,21 @@ def extract_behavior(nwbfile, trials):
     hand_acc = hand_acc / 800.0
 
     # create a behavior type segmentation mask
-    behavior_type = np.ones_like(timestamps, dtype=np.int64) * REACHING.RANDOM
+    subtask_index = np.ones_like(timestamps, dtype=np.int64) * int(Task.REACHING.RANDOM)
     for i in range(len(trials)):
         # first we check whether the trials are valid or not
         if trials.is_valid[i]:
-            behavior_type[
+            subtask_index[
                 (timestamps >= trials.target_on_time[i])
                 & (timestamps < trials.go_cue_time[i])
-            ] = REACHING.CENTER_OUT_HOLD
-            behavior_type[
+            ] = int(Task.REACHING.HOLD)
+            subtask_index[
                 (timestamps >= trials.move_begins_time[i])
                 & (timestamps < trials.move_ends_time[i])
-            ] = REACHING.CENTER_OUT_REACH
-            behavior_type[
+            ] = int(Task.REACHING.REACH)
+            subtask_index[
                 (timestamps >= trials.move_ends_time[i]) & (timestamps < trials.end[i])
-            ] = REACHING.CENTER_OUT_RETURN
+            ] = int(Task.REACHING.RETURN)
 
     # sometimes monkeys get angry, we want to identify the segments where the hand is
     # moving too fast, and mark them as outliers
@@ -94,20 +115,33 @@ def extract_behavior(nwbfile, trials):
     # we dilate the mask to make sure we are not missing any outliers
     structure = np.ones(50, dtype=bool)
     mask = binary_dilation(mask, structure)
-    behavior_type[mask] = REACHING.OUTLIER
+    subtask_index[mask] = int(Task.REACHING.OUTLIER)
 
-    behavior = IrregularTimeSeries(
+    cursor = IrregularTimeSeries(
         timestamps=timestamps,
-        cursor_pos=cursor_pos,
-        cursor_vel=cursor_vel,
-        hand_pos=hand_pos,
-        hand_vel=hand_vel,
-        hand_acc=hand_acc,
-        eye_pos=eye_pos,
-        type=behavior_type,
+        pos=cursor_pos,
+        vel=cursor_vel,
+        subtask_index=subtask_index,
+        domain="auto",
     )
 
-    return behavior
+    hand = IrregularTimeSeries(
+        timestamps=timestamps,
+        pos_2d=hand_pos,
+        vel_2d=hand_vel,
+        acc_2d=hand_acc,
+        subtask_index=subtask_index,
+        domain="auto",
+    )
+
+    eye = IrregularTimeSeries(
+        timestamps=timestamps,
+        pos_2d=eye_pos,
+        subtask_index=subtask_index,
+        domain="auto",
+    )
+
+    return cursor, hand, eye
 
 
 def main():
@@ -159,11 +193,7 @@ def main():
             session.register_session(
                 id=session_id,
                 recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
-                task=Task.DISCRETE_REACHING,
-                fields={
-                    RecordingTech.UTAH_ARRAY_THRESHOLD_CROSSINGS: "spikes",
-                    Output.CURSOR2D: "behavior.cursor_vel",
-                },
+                task=Task.REACHING,
             )
 
             # extract spiking activity
@@ -182,47 +212,40 @@ def main():
             trials = extract_trials(nwbfile)
 
             # extract behavior
-            behavior = extract_behavior(nwbfile, trials)
+            cursor, hand, eye = extract_behavior(nwbfile, trials)
 
             # close file
             io.close()
 
-            # register session
-            session_start, session_end = (
-                behavior.timestamps[0],
-                behavior.timestamps[-1],
-            )
-
             data = Data(
-                # metadata
-                start=session_start,
-                end=session_end,
-                session=session_id,
-                sortset=sortset_id,
-                subject=subject_id,
                 # neural activity
                 spikes=spikes,
                 units=units,
                 # stimuli and behavior
                 trials=trials,
-                behavior=behavior,
+                cursor=cursor,
+                hand=hand,
+                eye=eye,
+                domain=hand.domain,
             )
 
+            session.register_data(data)
+
             # split trials into train, validation and test
-            train_trials, valid_trials, test_trials = trials[trials.is_valid].split(
+            successful_trials = trials.select_by_mask(trials.is_valid)
+            assert successful_trials.is_disjoint()
+
+            _, valid_trials, test_trials = successful_trials.split(
                 [0.7, 0.1, 0.2], shuffle=True, random_seed=42
             )
 
-            # save samples
-            session.register_samples_for_training(
-                data, "train", exclude_intervals=[valid_trials, test_trials]
+            train_sampling_intervals = data.domain.difference(
+                (valid_trials | test_trials).dilate(3.0)
             )
-            session.register_samples_for_evaluation(
-                data, "valid", include_intervals=valid_trials
-            )
-            session.register_samples_for_evaluation(
-                data, "test", include_intervals=test_trials
-            )
+
+            session.register_split("train", train_sampling_intervals)
+            session.register_split("valid", valid_trials)
+            session.register_split("test", test_trials)
 
             # save data to disk
             session.save_to_disk()

@@ -60,11 +60,11 @@ module odoherty_sabes_nonhuman_2017_module:
 use rule * from odoherty_sabes_nonhuman_2017_module as odoherty_sabes_nonhuman_2017_*
 use rule all from odoherty_sabes_nonhuman_2017_module as odoherty_sabes_nonhuman_2017
 
-module churchland_shenoy_module:
-    snakefile: "data/scripts/churchland_shenoy/Snakefile"
+module churchland_shenoy_neural_2012_module:
+    snakefile: "data/scripts/churchland_shenoy_neural_2012/Snakefile"
     config: config
-use rule * from churchland_shenoy_module as churchland_shenoy_*
-use rule all from churchland_shenoy_module as churchland_shenoy
+use rule * from churchland_shenoy_neural_2012_module as churchland_shenoy_neural_2012_*
+use rule all from churchland_shenoy_neural_2012_module as churchland_shenoy_neural_2012
 
 module mc_maze_small_module:
     snakefile: "data/scripts/mc_maze_small/Snakefile"
@@ -95,6 +95,6 @@ use rule all from willett_henderson_speech_2023_module as willett_henderson_spee
 rule poyo_neurips:
     input:
         perich_miller_population_2018_module.rules.all.input,
-        churchland_shenoy_module.rules.all.input,
+        churchland_shenoy_neural_2012_module.rules.all.input,
         flint_slutzky_accurate_2012_module.rules.all.input,
         odoherty_sabes_nonhuman_2017_module.rules.all.input,

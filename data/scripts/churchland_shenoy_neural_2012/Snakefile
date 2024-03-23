@@ -2,7 +2,7 @@
 # Churchland & Shenoy (2012)
 ######################################################
 
-DATASET = "churchland_shenoy"
+DATASET = "churchland_shenoy_neural_2012"
 DANDI_ID = "000070"
 
 RAW_DIR = config["RAW_DIR"]
