@@ -76,6 +76,7 @@ class CVSyllable(IntEnum):
     zee = auto()
     zoo = auto()
 
+
 # From ARPABET
 class Phoneme(IntEnum):
     BLANK = 0
@@ -120,11 +121,13 @@ class Phoneme(IntEnum):
     ZH = auto()
     SIL = auto()
 
+
 g2p = None
 
 vocab = "abcdefghijklmnopqrstuvwxyz'- "
 # We write phonemes using this pseudo-cypher to calculate phoneme distances
 pseudo_code = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN "
+
 
 def to_phonemes(sentence, add_interword_symbol=True):
     global g2p
@@ -133,7 +136,7 @@ def to_phonemes(sentence, add_interword_symbol=True):
     )
     if g2p is None:
         from g2p_en import G2p
-        
+
         # Grapheme to phoneme library
         g2p = G2p()
 
@@ -150,11 +153,10 @@ def to_phonemes(sentence, add_interword_symbol=True):
     if add_interword_symbol:
         phonemes.append("SIL")
 
-    sentence = np.array(
-        [int(Phoneme[x]) for x in phonemes]
-    )
-    pseudo_sentence = ''.join([pseudo_code[x] for x in sentence])
+    sentence = np.array([int(Phoneme[x]) for x in phonemes])
+    pseudo_sentence = "".join([pseudo_code[x] for x in sentence])
     return pseudo_sentence, sentence
+
 
 def from_phonemes(sentence):
     # Use the greedy decoding approach, without a language model.
