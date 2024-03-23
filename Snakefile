@@ -78,6 +78,12 @@ module bouchard_chang_module:
 use rule * from bouchard_chang_module as bouchard_chang_*
 use rule all from bouchard_chang_module as bouchard_chang
 
+module flint_slutzky_accurate_2012_module:
+    snakefile: "data/scripts/flint_slutzky_accurate_2012/Snakefile"
+    config: config
+use rule * from flint_slutzky_accurate_2012_module as flint_slutzky_accurate_2012_*
+use rule all from flint_slutzky_accurate_2012_module as flint_slutzky_accurate_2012
+
 module willett_henderson_speech_2023_module:
     snakefile: "data/scripts/willett_henderson_speech_2023/Snakefile"
     config: config
@@ -89,4 +95,6 @@ use rule all from willett_henderson_speech_2023_module as willett_henderson_spee
 rule poyo_neurips:
     input:
         perich_miller_population_2018_module.rules.all.input,
+        churchland_shenoy_module.rules.all.input,
+        flint_slutzky_accurate_2012_module.rules.all.input,
         odoherty_sabes_nonhuman_2017_module.rules.all.input,
