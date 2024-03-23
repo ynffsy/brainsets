@@ -78,6 +78,12 @@ module bouchard_chang_module:
 use rule * from bouchard_chang_module as bouchard_chang_*
 use rule all from bouchard_chang_module as bouchard_chang
 
+module willett_henderson_speech_2023_module:
+    snakefile: "data/scripts/willett_henderson_speech_2023/Snakefile"
+    config: config
+use rule * from willett_henderson_speech_2023_module as willett_henderson_speech_2023_*
+use rule all from willett_henderson_speech_2023_module as willett_henderson_speech_2023
+
 
 # make rules that combine multiple datasets
 rule poyo_neurips:

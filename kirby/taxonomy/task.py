@@ -17,6 +17,9 @@ class Task(StringIntEnum):
     # speech
     DISCRETE_SPEAKING_CVSYLLABLE = 6
 
+    # Full sentence speaking
+    CONTINUOUS_SPEAKING_SENTENCE = 7
+
 
 class REACHING(StringIntEnum, parent=Task.REACHING):
     """A classic BCI task involving reaching to a 2d target."""
