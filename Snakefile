@@ -48,6 +48,12 @@ module perich_miller_population_2018_module:
 use rule * from perich_miller_population_2018_module as perich_miller_population_2018_*
 use rule all from perich_miller_population_2018_module as perich_miller_population_2018
 
+module evenchen_shenoy_structure_2019_module:
+    snakefile: "data/scripts/evenchen_shenoy_structure_2019/Snakefile"
+    config: config
+use rule * from evenchen_shenoy_structure_2019_module as evenchen_shenoy_structure_2019_*
+use rule all from evenchen_shenoy_structure_2019_module as evenchen_shenoy_structure_2019
+
 module willett_shenoy_module:
     snakefile: "data/scripts/willett_shenoy/Snakefile"
     config: config
