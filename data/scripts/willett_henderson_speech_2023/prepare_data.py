@@ -138,7 +138,7 @@ def stack_trials(mat_data):
     spikes = IrregularTimeSeries(
         timestamps=np.array(timestamps),
         unit_index=np.array(unit_index),
-        domain="trials",
+        domain=trials,
     )
 
     sentences = [clean(x) for x in mat_data["sentenceText"].squeeze().tolist()]
