@@ -66,7 +66,9 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
         # extract spikes
         spiketimes = units[i]
         timestamps.append(spiketimes)
-        unit_index.append([i] * len(spiketimes))
+
+        if len(spiketimes) > 0:
+            unit_index.append([i] * len(spiketimes))
 
         # extract unit metadata
         unit_meta.append(
