@@ -8,7 +8,7 @@ PROCESSED_DIR = config["PROCESSED_DIR"]
 
 rule all:
     input:
-        f"{PROCESSED_DIR}/{DATASET}/description.mpk"
+        description = f"{PROCESSED_DIR}/{DATASET}/description.mpk"
 
 rule download_data:
     output:
@@ -33,7 +33,7 @@ rule untar:
 rule prepare_data:
     input:
         py_script = f"data/scripts/{DATASET}/prepare_data.py",
-        mat_file = f"{RAW_DIR}/{DATASET}/competitionData/t12.2022.05.05_sentences.mat"
+        mat_file = f"{RAW_DIR}/{DATASET}/competitionData/train/t12.2022.05.05.mat"
     output:
         description = f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     log:
