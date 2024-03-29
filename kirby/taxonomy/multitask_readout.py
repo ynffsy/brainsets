@@ -32,10 +32,15 @@ class Decoder(StringIntEnum):
     # Allen data
     DRIFTING_GRATINGS = 13
     DRIFTING_GRATINGS_TEMP_FREQ = 23
+    STATIC_GRATINGS = 15
+    RUNNING_SPEED = 24
+    PUPIL_SIZE_2D = 25
+    GAZE_POS_2D = 26
+    GABOR_ORIENTATION = 21  #
+    GABOR_POS_2D = 27
 
     # Openscope calcium
     UNEXPECTED_OR_NOT = 20  #
-    GABOR_ORIENTATION = 21  #
     PUPIL_MOVEMENT_REGRESSION = 22
 
     # speech
@@ -105,8 +110,8 @@ decoder_registry = {
         target_dim=1,
         target_dtype="long",
         type=OutputType.MULTINOMIAL,
-        timestamp_key="stimuli_segments.timestamps",
-        value_key="stimuli_segments.drifting_class",
+        timestamp_key="drifting_gratings.timestamps",
+        value_key="drifting_gratings.orientation",
         loss_fn="bce",
     ),
     str(Decoder.DRIFTING_GRATINGS_TEMP_FREQ): DecoderSpec(
@@ -114,8 +119,17 @@ decoder_registry = {
         target_dim=1,
         target_dtype="long",
         type=OutputType.MULTINOMIAL,
-        timestamp_key="stimuli_segments.timestamps",
-        value_key="stimuli_segments.drifting_temp_freq",
+        timestamp_key="drifting_gratings.timestamps",
+        value_key="drifting_gratings.temp_freq",
+        loss_fn="bce",
+    ),
+    str(Decoder.STATIC_GRATINGS): DecoderSpec(
+        dim=6,
+        target_dim=1,
+        target_dtype="long",
+        type=OutputType.MULTINOMIAL,
+        timestamp_key="static_gratings.timestamps",
+        value_key="static_gratings.orientation",
         loss_fn="bce",
     ),
     # str(Decoder.SPEAKING_CVSYLLABLE): DecoderSpec(
@@ -132,8 +146,40 @@ decoder_registry = {
         target_dim=1,
         target_dtype="long",
         type=OutputType.MULTINOMIAL,
-        timestamp_key="gabor_trials.timestamps",
-        value_key="gabor_trials.gabor_orientation",
+        timestamp_key="gabors.timestamps",
+        value_key="gabors.gabors_orientation",
         loss_fn="bce",
+    ),
+    str(Decoder.GABOR_POS_2D): DecoderSpec(  # 9x9 grid modeled as (x, y) coordinates
+        dim=2,
+        target_dim=2,
+        type=OutputType.CONTINUOUS,
+        timestamp_key="gabors.timestamps",
+        value_key="gabors.pos_2d",
+        loss_fn="mse",
+    ),
+    str(Decoder.RUNNING_SPEED): DecoderSpec(
+        dim=1,
+        target_dim=1,
+        type=OutputType.CONTINUOUS,
+        timestamp_key="running_speed.timestamps",
+        value_key="running_speed.normalized_running_speed",
+        loss_fn="mse",
+    ),
+    str(Decoder.GAZE_POS_2D): DecoderSpec(
+        dim=2,
+        target_dim=2,
+        type=OutputType.CONTINUOUS,
+        timestamp_key="gaze.timestamps",
+        value_key="gaze.pos_2d",
+        loss_fn="mse",
+    ),
+    str(Decoder.PUPIL_SIZE_2D): DecoderSpec(
+        dim=2,
+        target_dim=2,
+        type=OutputType.CONTINUOUS,
+        timestamp_key="pupil.timestamps",
+        value_key="pupil.size_2d",
+        loss_fn="mse",
     ),
 }
