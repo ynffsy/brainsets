@@ -23,6 +23,7 @@ class RecordingTech(StringIntEnum):
     OPENSCOPE_CALCIUM_RAW = 21
 
     ECOG_ARRAY_ECOGS = 29
+    MICRO_ECOG_ARRAY_ECOGS = 30
 
 
 class Hemisphere(StringIntEnum):

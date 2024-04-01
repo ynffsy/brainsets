@@ -16,7 +16,7 @@ class Decoder(StringIntEnum):
     NA = 0
     # Classic BCI outputs.
     ARMVELOCITY2D = 1
-    CURSOR2D = 2
+    CURSORPOSITION2D = 2
     EYE2D = 3
     FINGER3D = 4
 
@@ -45,6 +45,8 @@ class Decoder(StringIntEnum):
 
     # speech
     SPEAKING_CVSYLLABLE = 14
+    SPEAKING_CONSONANT = 15
+    SPEAKING_VOWEL = 16
 
 
 @dataclass
@@ -79,12 +81,13 @@ decoder_registry = {
         subtask_key="cursor.subtask_index",
         loss_fn="mse",
     ),
-    str(Decoder.CURSOR2D): DecoderSpec(
+    str(Decoder.CURSORPOSITION2D): DecoderSpec(
         dim=2,
         target_dim=2,
         type=OutputType.CONTINUOUS,
-        timestamp_key="behavior.timestamps",
-        value_key="behavior.cursor_pos",
+        timestamp_key="cursor.timestamps",
+        value_key="cursor.pos",
+        subtask_key="cursor.subtask_index",
         loss_fn="mse",
     ),
     # str(Decoder.WRITING_CHARACTER): DecoderSpec(
