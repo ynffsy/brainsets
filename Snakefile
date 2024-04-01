@@ -96,6 +96,11 @@ module willett_henderson_speech_2023_module:
 use rule * from willett_henderson_speech_2023_module as willett_henderson_speech_2023_*
 use rule all from willett_henderson_speech_2023_module as willett_henderson_speech_2023
 
+module orsborn_lab_ecog_reaching_2024_module:
+    snakefile: "data/scripts/orsborn_lab_ecog_reaching_2024/Snakefile"
+    config: config
+use rule * from orsborn_lab_ecog_reaching_2024_module as orsborn_lab_ecog_reaching_2024_*
+use rule all from orsborn_lab_ecog_reaching_2024_module as orsborn_lab_ecog_reaching_2024
 
 # make rules that combine multiple datasets
 rule poyo_neurips:
