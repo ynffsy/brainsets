@@ -137,28 +137,6 @@ def extract_gabors(stimulus_pres):
     return gabors_trials
 
 
-def extract_static_gratings(stimulus_pres):
-    static_gratings = stimulus_pres[
-        (stimulus_pres["stimulus_name"] == "static_gratings")
-        & (stimulus_pres["orientation"] != "null")
-    ]
-
-    trials = Interval(
-        start=static_gratings["start_time"].values,
-        end=static_gratings["stop_time"].values,
-        orientation=static_gratings["orientation"].values.astype(np.float32),
-    )
-
-    static_gratings_obj = copy.deepcopy(trials)
-    static_gratings_obj.orientation = np.round(
-        static_gratings_obj.orientation / 30.0
-    ).astype(
-        np.int64
-    )  # (N,)
-    static_gratings_obj.timestamps = np.ones_like(static_gratings_obj.start) * 0.5
-    return static_gratings_obj
-
-
 def extract_running_speed(session):
     """
     Extracts running_speed data from the given session.
@@ -309,6 +287,27 @@ def extract_pupil(session):
     )  # (N, 2)
 
     return pupil_obj
+
+
+def extract_static_gratings(stimulus_pres):
+    static_gratings = stimulus_pres[
+        (stimulus_pres["stimulus_name"] == "static_gratings")
+        & (stimulus_pres["orientation"] != "null")
+    ]
+
+    start_times = static_gratings["start_time"].values
+    end_times = static_gratings["stop_time"].values
+    orientations = static_gratings["orientation"].values.astype(np.float32)
+    orientation_classes = np.round(orientations / 30.0).astype(np.int64)
+    output_timestamps = (start_times + end_times) / 2
+
+    return Interval(
+        start=start_times,
+        end=end_times,
+        orientation=orientation_classes,  # (N,)
+        timestamps=output_timestamps,  # (N,)
+        timekeys=["start", "end", "timestamps"],
+    )
 
 
 def extract_drifting_gratings(stimulus_pres):
