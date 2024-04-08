@@ -30,3 +30,12 @@ class Cre_line(StringIntEnum):
     SST_IRES_CRE = 10
     TLX3_CRE_PL56 = 11
     VIP_IRES_CRE = 12
+
+
+class Vis_areas(StringIntEnum):
+    VIS_RL = 0  # Excluded
+    VIS_PM = 1
+    VIS_AL = 2
+    VIS_AM = 3
+    VIS_P = 4
+    VIS_L = 5

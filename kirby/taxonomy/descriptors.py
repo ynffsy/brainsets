@@ -8,6 +8,7 @@ from pydantic.dataclasses import dataclass
 
 from .core import Dictable, StringIntEnum
 from kirby.taxonomy import *
+from kirby.taxonomy.mice import *
 
 
 @dataclass
@@ -46,6 +47,8 @@ class SubjectDescription(Dictable):
     age: float = 0.0  # in days
     sex: Sex = Sex.UNKNOWN
     genotype: str = "unknown"  # no idea how many there will be for now.
+    cre_line: Optional[Cre_line] = None
+    target_area: Optional[Vis_areas] = None
 
 
 @dataclass

@@ -66,20 +66,20 @@ rule all:
     input:
         f"{PROCESSED_DIR}/{DATASET}/description.mpk"
 
-rule download_dataset:
-    output:
-        nwb_files = expand(f"{RAW_DIR}/{DATASET}/{{dataset}}_behavior+ophys.nwb", dataset=DATASETS)
-    shell:
-        f"""
-        mkdir -p {RAW_DIR}/{DATASET}
+#rule download_dataset:
+#    output:
+#        nwb_files = expand(f"{RAW_DIR}/{DATASET}/{{dataset}}_behavior+ophys.nwb", dataset=DATASETS)
+#   shell:
+#        f"""
+#        mkdir -p {RAW_DIR}/{DATASET}
+#
+#        yaml_output=$(dandi ls -r DANDI:000037/0.240209.1623)    
+#        asset_ids=$(echo "$yaml_output" | yq -r '.[] | select(.path | endswith("_behavior+ophys.nwb")) | .asset_id')
 
-        yaml_output=$(dandi ls -r DANDI:000037/0.240209.1623)    
-        asset_ids=$(echo "$yaml_output" | yq -r '.[] | select(.path | endswith("_behavior+ophys.nwb")) | .asset_id')
-
-        while IFS= read -r asset_id; do
-            dandi download -o {RAW_DIR}/{DATASET} "https://api.dandiarchive.org/api/dandisets/000037/versions/0.240209.1623/assets/$asset_id/download/"
-        done <<< "$asset_ids"
-        """
+#        while IFS= read -r asset_id; do
+#           dandi download -o {RAW_DIR}/{DATASET} "https://api.dandiarchive.org/api/dandisets/000037/versions/0.240209.1623/assets/$asset_id/download/"
+#        done <<< "$asset_ids"
+#        """
 
 rule prepare_data:
     input:
@@ -91,6 +91,7 @@ rule prepare_data:
         f".snakemake/logs/{DATASET}/prepare_data.log"
     shell:
         f"""
+        pip install -r data/scripts/{DATASET}/requirements.txt
         mkdir -p {PROCESSED_DIR}/{DATASET}
         python data/scripts/{DATASET}/prepare_data.py --input_dir {RAW_DIR}/{DATASET} --output_dir {PROCESSED_DIR}/{DATASET}
         """

@@ -4,28 +4,28 @@ import argparse
 import datetime
 import logging
 import os
-import copy
-import math
-import torch
 from sklearn.preprocessing import MinMaxScaler
 
 import numpy as np
 import pandas as pd
 import sys
-
-sys.path.append("/home/mila/x/xuejing.pan/POYO/project-kirby")
-
-from kirby.tasks.visual_coding import VISUAL_CODING
-from kirby.data import Data, IrregularTimeSeries, Interval, DatasetBuilder, ArrayDict
-from kirby.utils import find_files_by_extension
-from kirby.taxonomy import *
-from kirby.taxonomy.taxonomy import *
-
+import csv
 from allensdk.core.brain_observatory_cache import BrainObservatoryCache
 from tqdm import tqdm
 
-from data.scripts.openscope_calcium.utils import *
-
+from kirby.taxonomy import *
+from kirby.data import (
+    Data,
+    RegularTimeSeries,
+    IrregularTimeSeries,
+    Interval,
+    DatasetBuilder,
+    ArrayDict,
+)
+from kirby.utils import find_files_by_extension
+from kirby.utils import find_files_by_extension
+from kirby.taxonomy.mice import *
+from kirby.taxonomy.subject import *
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,6 +34,10 @@ logging.basicConfig(level=logging.INFO)
 WINDOW_SIZE = 1.0
 STEP_SIZE = 0.5
 JITTER_PADDING = 0.25
+
+
+def min_max_scale(data, data_min, data_max):
+    return 2 * ((data - data_min) / (data_max - data_min)) - 1
 
 
 def get_roi_position(ROI_masks, num_rois):
@@ -52,9 +56,7 @@ def get_roi_position(ROI_masks, num_rois):
 
         centroids[count] = [centroid_y, centroid_x]
 
-    sinu_pos = get_sinusoidal_encoding(centroids[:, 0], centroids[:, 1], num_dims=32)
-
-    return sinu_pos
+    return centroids
 
 
 def get_roi_feats(ROI_masks, num_rois):
@@ -82,48 +84,102 @@ def get_roi_feats(ROI_masks, num_rois):
     return normalized_areas, normalized_heights, normalized_widths
 
 
-def get_stim_data(meta_table, timestamps):
-    """
-    inputs: stim table from allen sdk
-            timestamps
-    outputs:
-    """
-    stim_df = pd.DataFrame(meta_table)
+def extract_stim_trials(nwbfile):
+    timestamps, _ = nwbfile.get_dff_traces()
+    master_stim_table = nwbfile.get_stimulus_table("drifting_gratings")
+
+    stim_df = pd.DataFrame(master_stim_table)
 
     start_times = timestamps[stim_df.loc[(stim_df["blank_sweep"] == 0.0), "start"]]
     end_times = timestamps[stim_df.loc[(stim_df["blank_sweep"] == 0.0), "end"]]
-    temp_freqs = stim_df.loc[(stim_df["blank_sweep"] == 0.0), "temporal_frequency"]
-    orientations = stim_df.loc[(stim_df["blank_sweep"] == 0.0), "orientation"]
+    temp_freqs = stim_df.loc[
+        (stim_df["blank_sweep"] == 0.0), "temporal_frequency"
+    ].values
+    orientations = stim_df.loc[(stim_df["blank_sweep"] == 0.0), "orientation"].values
+    temp_freq_map = {1.0: 0, 2.0: 1, 4.0: 2, 8.0: 3, 15.0: 4}
 
     trials = Interval(
-        start=start_times,
-        end=end_times,
-        orientation=orientations.values.astype(np.float32),
-        temporal_frequency=temp_freqs.values.astype(np.float32),
+        start=np.array(start_times),
+        end=np.array(end_times),
+        timestamps=(np.array(start_times) + np.array(end_times)) / 2,
+        orientation=np.round(orientations / 45.0).astype(np.int64),
+        temp_freq=np.array([temp_freq_map[freq] for freq in temp_freqs]).astype(
+            np.int64
+        ),
+        timekeys=["start", "end", "timestamps"],
     )
 
-    timestamps = np.concatenate([trials.start, trials.end])
-    types = np.concatenate(
-        [
-            np.ones_like(trials.start) * VISUAL_CODING.STIMULUS_ON,
-            np.ones_like(trials.end) * VISUAL_CODING.STIMULUS_OFF,
-        ]
+    return trials
+
+
+def get_maps():
+    cre_line_map = {
+        "Cux2-CreERT2/Cux2-CreERT2": Cre_line.CUX2_CREERT2,
+        "Cux2-CreERT2/wt": Cre_line.CUX2_CREERT2,
+        "Emx1-IRES-Cre/wt": Cre_line.EXM1_IRES_CRE,
+        "Fezf2-CreER/wt": Cre_line.FEZF2_CREER,
+        "Nr5a1-Cre/wt": Cre_line.NR5A1_CRE,
+        "Ntsr1-Cre_GN220/wt": Cre_line.NTSR1_CRE_GN220,
+        "Pvalb-IRES-Cre/wt": Cre_line.PVALB_IRES_CRE,
+        "Rbp4-Cre_KL100/wt": Cre_line.RBP4_CRE_KL100,
+        "Rorb-IRES2-Cre/wt": Cre_line.RORB_IRES2_CRE,
+        "Scnn1a-Tg3-Cre/wt": Cre_line.SCNN1A_TG3_CRE,
+        "Slc17a7-IRES2-Cre/wt": Cre_line.SLC17A7_IRES2_CRE,
+        "Sst-IRES-Cre/wt": Cre_line.SST_IRES_CRE,
+        "Tlx3-Cre_PL56/wt": Cre_line.TLX3_CRE_PL56,
+        "Vip-IRES-Cre/wt": Cre_line.VIP_IRES_CRE,
+    }
+    sex_map = {"male": Sex.MALE, "female": Sex.FEMALE}
+
+    vis_area_map = {
+        "VISrl": Vis_areas.VIS_RL,
+        "VISpm": Vis_areas.VIS_PM,
+        "VISal": Vis_areas.VIS_AL,
+        "VISam": Vis_areas.VIS_AM,
+        "VISp": Vis_areas.VIS_P,
+        "VISl": Vis_areas.VIS_L,
+    }
+    return cre_line_map, sex_map, vis_area_map
+
+
+def extract_calcium_traces(nwbfile):
+    timestamps, traces = nwbfile.get_dff_traces()
+    traces = np.transpose(traces)
+    # timestamps = np.array(timestamps).astype(np.float32)
+    # traces = np.array(traces.astype(np.float32))
+
+    # estimate sampling rate
+    # assert np.std(np.diff(timestamps)) < 1e-5  # less than 10 ns
+    sampling_rate = 1 / np.mean(np.diff(timestamps))
+
+    calcium_traces = RegularTimeSeries(
+        df_over_f=np.array(traces),
+        sampling_rate=sampling_rate,
+        domain=Interval(
+            np.array([float(timestamps[0])]),
+            np.array([float(timestamps[0] + (len(timestamps) - 1) / sampling_rate)]),
+        ),
     )
 
-    stimuli_events = IrregularTimeSeries(
-        timestamps=timestamps,
-        types=types,
+    return calcium_traces
+
+
+def extract_units(nwbfile):
+    roi_ids = nwbfile.get_roi_ids()
+
+    ROI_masks = nwbfile.get_roi_mask()
+    unit_positions = get_roi_position(ROI_masks, roi_ids.shape[0])
+    unit_area, unit_width, unit_height = get_roi_feats(ROI_masks, roi_ids.shape[0])
+
+    units = ArrayDict(
+        id=roi_ids.astype(str),
+        imaging_plane_xy=np.array(unit_positions),
+        imaging_plane_area=np.array(unit_area),
+        imaging_plane_width=np.array(unit_width),
+        imaging_plane_height=np.array(unit_height),
     )
 
-    ORIENTAIONS = [0, 45, 90, 135, 180, 225, 270, 315]
-    stimuli_segments = copy.deepcopy(trials)
-    stimuli_segments.drifting_class = np.round(trials.orientation / 45.0).astype(
-        np.int64
-    )
-    stimuli_segments.drifting_temp_freq = trials.temporal_frequency.astype(np.int64)
-    stimuli_segments.timestamps = np.ones_like(stimuli_segments.start) * 0.5
-
-    return trials, stimuli_events, stimuli_segments
+    return units
 
 
 def main():
@@ -138,14 +194,6 @@ def main():
     manifest_path = os.path.join(args.input_dir, "manifest.json")
     boc = BrainObservatoryCache(manifest_file=manifest_path)
 
-    # Using a metadata file instead of dealing with filtering every single time
-    meta_df = pd.read_csv(
-        "/home/mila/x/xuejing.pan/POYO/project-kirby/data/scripts/allen_brain_observatory_calcium/AllenBOmeta.csv"
-    )
-    sess_ids = meta_df["exp_id"].values
-    subject_ids = meta_df["subject_id"].values
-    cre_lines = meta_df["cre_line"].values
-
     db = DatasetBuilder(
         raw_folder_path=args.input_dir,
         processed_folder_path=args.output_dir,
@@ -158,125 +206,63 @@ def main():
         "Allen Institute Brain Observatory with stimulus drifting gratings.",
     )
 
-    for count, curr_sess_id in enumerate(sess_ids):
+    nwb_file_path = os.path.join(db.raw_folder_path, "ophys_experiment_data")
+
+    # for count, curr_sess_id in enumerate(sess_ids):
+    for count, file_path in enumerate(find_files_by_extension(nwb_file_path, ".nwb")):
+        logging.info(f"Processing file {count}: {file_path}")
         # FOR TESTING!!!!
         # if count >= 10:
         #    break
         with db.new_session() as session:
-            print("AT FILE: ", count)
 
-            nwbfile = boc.get_ophys_experiment_data(curr_sess_id)
+            session_id = int(file_path[-13:-4])
+            nwbfile = boc.get_ophys_experiment_data(
+                ophys_experiment_id=session_id, file_name=file_path
+            )
 
-            curr_meta_sess = nwbfile.get_metadata()
-
-            cre_line_map = {
-                "Cux2-CreERT2": Cre_line.CUX2_CREERT2,
-                "Emx1-IRES-Cre": Cre_line.EXM1_IRES_CRE,
-                "Fezf2-CreER": Cre_line.FEZF2_CREER,
-                "Nr5a1-Cre": Cre_line.NR5A1_CRE,
-                "Ntsr1-Cre_GN220": Cre_line.NTSR1_CRE_GN220,
-                "Pvalb-IRES-Cre": Cre_line.PVALB_IRES_CRE,
-                "Rbp4-Cre_KL100": Cre_line.RBP4_CRE_KL100,
-                "Rorb-IRES2-Cre": Cre_line.RORB_IRES2_CRE,
-                "Scnn1a-Tg3-Cre": Cre_line.SCNN1A_TG3_CRE,
-                "Slc17a7-IRES2-Cre": Cre_line.SLC17A7_IRES2_CRE,
-                "Sst-IRES-Cre": Cre_line.SST_IRES_CRE,
-                "Tlx3-Cre_PL56": Cre_line.TLX3_CRE_PL56,
-                "Vip-IRES-Cre": Cre_line.VIP_IRES_CRE,
-            }
-            sex_map = {"male": Sex.MALE, "female": Sex.FEMALE}
+            session_meta_data = nwbfile.get_metadata()
+            cre_line_map, sex_map, vis_area_map = get_maps()
 
             subject = SubjectDescription(
-                id=str(subject_ids[count]),
+                id=str(session_id),
                 species=Species.MUS_MUSCULUS,
-                sex=sex_map[curr_meta_sess["sex"]],
-                cre_line=cre_line_map[cre_lines[count]],
+                sex=sex_map[session_meta_data["sex"]],
+                cre_line=cre_line_map[session_meta_data["cre_line"]],
+                target_area=vis_area_map[session_meta_data["targeted_structure"]],
             )
 
             session.register_subject(subject)
 
-            recording_date = curr_meta_sess["session_start_time"].strftime("%Y%m%d")
-            sortset_id = curr_sess_id
+            recording_date = session_meta_data["session_start_time"]
+            # sortset_id = f"{session_id}_{vis_area_map[session_meta_data['targeted_structure']]}"
+            sortset_id = str(session_id)
 
+            # register session
             session.register_session(
-                id=str(curr_sess_id),
+                id=str(session_id),
                 recording_date=recording_date,
                 task=Task.DISCRETE_VISUAL_CODING,
-                fields={
-                    RecordingTech.OPENSCOPE_CALCIUM_TRACES: "spikes",
-                    Output.DRIFTING_GRATINGS: "stimuli_segments.drifting_class",  # orientation
-                    Output.DRIFTING_GRATINGS_TEMP_FREQ: "stimuli_segments.drifting_temp_freq",
-                },
             )
 
-            roi_ts, traces = nwbfile.get_dff_traces()
-            traces_1d = torch.tensor(traces).view(-1)
+            calcium_traces = extract_calcium_traces(nwbfile)
+            units = extract_units(nwbfile)
 
-            curr_num_rois = traces.shape[0]
-            curr_num_frames = traces.shape[1]
+            drifting_gratings = extract_stim_trials(nwbfile)
 
-            roi_ts_long = (torch.tensor(roi_ts)).repeat_interleave(curr_num_rois)
-            roi_ids = nwbfile.get_roi_ids()
-
-            traces = IrregularTimeSeries(
-                timestamps=np.array((roi_ts_long)),
-                unit_index=np.tile(
-                    np.arange(0, curr_num_rois).astype(np.int16), (curr_num_frames,)
-                ),
-                values=np.array(traces_1d),
-            )
-
-            ROI_masks = nwbfile.get_roi_mask()
-            unit_positions = get_roi_position(ROI_masks, curr_num_rois)
-            unit_area, unit_width, unit_height = get_roi_feats(ROI_masks, curr_num_rois)
-
-            units = ArrayDict(
-                **{
-                    "id": roi_ids,
-                    "unit_names": roi_ids,
-                    "unit_positions": np.array(unit_positions),
-                    "unit_areas": np.array(unit_area),
-                    "unit_widths": np.array(unit_width),
-                    "unit_heights": np.array(unit_height),
-                }
-            )
-
-            session.register_sortset(
-                id=str(sortset_id),
-                units=units,
-            )
-
-            master_stim_table = nwbfile.get_stimulus_table("drifting_gratings")
-            trials, stimuli_events, stimuli_segments = get_stim_data(
-                master_stim_table, roi_ts
-            )
-
-            stimulus_epochs = nwbfile.get_stimulus_epoch_table()
-            session_start, session_end = (
-                roi_ts[stimulus_epochs.iloc[0]["start"]],
-                roi_ts[stimulus_epochs.iloc[-1]["end"]],
-            )
+            session.register_sortset(id=sortset_id, units=units)
 
             data = Data(
-                # metadata
-                start=session_start,
-                end=session_end,
-                session=curr_sess_id,
-                sortset=sortset_id,
-                subject=subject.id,
-                # neural activity
-                spikes=traces,
+                calcium_traces=calcium_traces,
                 units=units,
-                # stimuli (and behaviour to come)
-                trials=trials,
-                stimuli_events=stimuli_events,
-                stimuli_segments=stimuli_segments,
+                drifting_gratings=drifting_gratings,
+                domain=calcium_traces.domain,
             )
 
             session.register_data(data)
 
             # split and register trials into train, validation and test
-            train_trials, valid_trials, test_trials = trials.split(
+            train_trials, valid_trials, test_trials = drifting_gratings.split(
                 [0.7, 0.1, 0.2], shuffle=True, random_seed=42
             )
 
@@ -284,7 +270,7 @@ def main():
             session.register_split("valid", valid_trials)
             session.register_split("test", test_trials)
 
-            # trials.allow_split_mask_overlap()
+            # stim_trials.allow_split_mask_overlap()
 
             # save data to disk
             session.save_to_disk()
