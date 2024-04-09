@@ -32,7 +32,7 @@ class Decoder(StringIntEnum):
     # Allen data
     DRIFTING_GRATINGS = 13
     DRIFTING_GRATINGS_TEMP_FREQ = 23
-    STATIC_GRATINGS = 15
+    STATIC_GRATINGS = 17
     RUNNING_SPEED = 24
     PUPIL_SIZE_2D = 25
     GAZE_POS_2D = 26
