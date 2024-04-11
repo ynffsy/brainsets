@@ -462,7 +462,16 @@ rule all:
 
 rule download_data:
     output:
-        nwb_files = expand(f"{RAW_DIR}/{DATASET}/ophys_experiment_data/{{session_id}}.nwb", session_id=SESSION_IDS_CA)
+        nwb_files_ca = expand(f"{RAW_DIR}/{DATASET}/ophys_experiment_data/{{session_id}}.nwb", session_id=SESSION_IDS_CA)
+    shell:
+        f"""
+        python data/scripts/allen_brain_observatory_calcium/download_data.py --output_dir {RAW_DIR}/{DATASET}
+        """
+
+rule prepare_data:
+    input:
+        py_script = f"data/scripts/{DATASET}/prepare_data.py",
+        nwb_files_ca = expand(f"{RAW_DIR}/{DATASET}/ophys_experiment_data/{{session_id}}.nwb", session_id=SESSION_IDS_CA)
     output:
         description = f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     log:

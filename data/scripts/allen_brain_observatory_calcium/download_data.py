@@ -458,13 +458,20 @@ if __name__ == "__main__":
 
     for curr_sess_id in SESSION_IDS:
         truncated_file = True
+        file_path = os.path.join(
+            args.output_dir, f"ophys_experiment_data/{curr_sess_id}.nwb"
+        )
 
         while truncated_file:
             try:
                 exp = boc.get_ophys_experiment_data(
-                    ophys_experiment_id=int(curr_sess_id)
+                    file_name=file_path, ophys_experiment_id=int(curr_sess_id)
                 )
                 truncated_file = False
             except OSError:
-                shutil.rmtree(args.output_dir)
-                print(" Truncated spikes file, re-downloading")
+                os.remove(
+                    os.path.join(
+                        args.output_dir, f"ophys_experiment_data/{curr_sess_id}.nwb"
+                    )
+                )
+                print(" Truncated file, re-downloading")
