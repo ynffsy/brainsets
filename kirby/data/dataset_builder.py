@@ -479,6 +479,15 @@ class SessionContextManager:
         assert self.session is not None, "A session must be registered."
         self.check_no_mask_overlap()
 
+        # self.data.subject_id = self.subject.id
+        # self.data.session_id = self.session.id
+        # self.data.sortset_id = self.sortset.id
+
+        self.data.subject = Data(**to_serializable(self.subject), domain=None)
+        # TODO(mehdi): add session, sortset and dandiset to the data object, but these
+        # contain lists of objects that we can't serialize to hdf5 and we probably don't
+        # want to save them anyways.
+
         path = os.path.join(self.builder.processed_folder_path, f"{self.session.id}.h5")
 
         with h5py.File(path, "w") as file:
@@ -497,10 +506,6 @@ class SessionContextManager:
             raise ValueError("A session must be registered.")
         if self.data is None:
             raise ValueError("A data object must be registered.")
-
-        self.data.subject_id = self.subject.id
-        self.data.session_id = self.session.id
-        self.data.sortset_id = self.sortset.id
 
         self.session.dandiset_id = self.builder.experiment_name
         self.session.subject_id = self.subject.id
