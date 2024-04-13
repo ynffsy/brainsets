@@ -38,6 +38,7 @@ class Decoder(StringIntEnum):
     GAZE_POS_2D = 26
     GABOR_ORIENTATION = 21  #
     GABOR_POS_2D = 27
+    NATURAL_SCENES = 28
 
     # Openscope calcium
     UNEXPECTED_OR_NOT = 20  #
@@ -144,6 +145,15 @@ decoder_registry = {
     #     value_key="speech.consonant_vowel_syllables",
     #     loss_fn="bce",
     # ),
+    str(Decoder.NATURAL_SCENES): DecoderSpec(
+        dim=119,  # image classes [0,...,118]
+        target_dim=1,
+        target_dtype="long",
+        type=OutputType.MULTINOMIAL,
+        timestamp_key="natural_scenes.timestamps",
+        value_key="natural_scenes.image_ids",
+        loss_fn="bce",
+    ),
     str(Decoder.GABOR_ORIENTATION): DecoderSpec(
         dim=4,  # [0, 1, 2, 3]
         target_dim=1,

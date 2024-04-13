@@ -3,13 +3,10 @@
 import argparse
 import logging
 import os
-import copy
 from typing import Dict
 
 import numpy as np
 import pandas as pd
-
-from collections import namedtuple
 
 from kirby.data import Data, IrregularTimeSeries, Interval, DatasetBuilder, ArrayDict
 from kirby.taxonomy import RecordingTech, Species, SubjectDescription, Sex, Task
@@ -79,6 +76,29 @@ def extract_spikes(session, prefix):
     )
 
     return spikes, units
+
+
+def extract_natural_scenes(stimulus_pres):
+    ns_presentations = stimulus_pres[
+        np.array(stimulus_pres["stimulus_name"] == "natural_scenes")
+        & np.array(stimulus_pres["frame"] != "null")
+    ]
+
+    if len(ns_presentations) == 0:
+        return None
+
+    start_times = ns_presentations["start_time"].values
+    end_times = ns_presentations["stop_time"].values
+    image_ids = ns_presentations["frame"].values.astype(np.int64)  # ids span -1 to 117
+    image_ids = image_ids + 1  # now they span 0 to 118
+
+    return Interval(
+        start=start_times,
+        end=end_times,
+        image_ids=image_ids,
+        timestamps=start_times / 2.0 + end_times / 2.0,
+        timekeys=["start", "end", "timestamps"],
+    )
 
 
 def extract_gabors(stimulus_pres):
@@ -378,17 +398,6 @@ def get_drifting_gratings_splits(drifting_gratings_obj):
 def get_static_gratings_splits(static_gratings_obj):
     if static_gratings_obj is None or len(static_gratings_obj) == 0:
         return {"train": None, "valid": None, "test": None}
-
-    def coalesce(intervals):
-        df = pd.DataFrame({"start": intervals.start, "end": intervals.end})
-        df["group"] = (df.start > df.end.shift()).cumsum()
-        coalesced_df = df.groupby("group", as_index=False).agg(
-            start=pd.NamedAgg(column="start", aggfunc="min"),
-            end=pd.NamedAgg(column="end", aggfunc="max"),
-        )
-        coalesced_intervals = Interval.from_dataframe(coalesced_df)
-        return coalesced_intervals
-
     train_trials, valid_trials, test_trials = static_gratings_obj.split([0.7, 0.1, 0.2])
     splits_dict = {}
     for split, split_trial in [
@@ -396,20 +405,19 @@ def get_static_gratings_splits(static_gratings_obj):
         ("valid", valid_trials),
         ("test", test_trials),
     ]:
-        split_trial = coalesce(split_trial)
-        mask = (split_trial.end - split_trial.start) < 1.0
-        split_trial = Interval(
-            start=split_trial.start[~mask], end=split_trial.end[~mask]
-        )
+        split_trial = split_trial.coalesce()
+        mask = (split_trial.end - split_trial.start) >= 1.0
+        # even after coalescing, some trials might be less than 1 second long
+        # so we filter them out
+        split_trial = split_trial.select_by_mask(mask)
         assert (
             split_trial.end - split_trial.start > 1.0
         ).all(), "Split trials must be at least 1 second long."
         splits_dict[split] = split_trial
-    return {
-        "train": splits_dict["train"],
-        "valid": splits_dict["valid"],
-        "test": splits_dict["test"],
-    }
+    return splits_dict
+
+
+get_natural_scenes_splits = get_static_gratings_splits  # same splitting logic
 
 
 def get_gabors_splits(gabors_obj, split_ratios=[0.7, 0.1, 0.2]):
@@ -593,6 +601,7 @@ def main():
                 "drifting_gratings": extract_drifting_gratings(stimulus_presentations),
                 "static_gratings": extract_static_gratings(stimulus_presentations),
                 "gabors": extract_gabors(stimulus_presentations),
+                "natural_scenes": extract_natural_scenes(stimulus_presentations),
             }
 
             # register session
@@ -618,6 +627,9 @@ def main():
                     supervision_dict.get("static_gratings", None)
                 ),
                 "gabors": get_gabors_splits(supervision_dict.get("gabors", None)),
+                "natural_scenes": get_natural_scenes_splits(
+                    supervision_dict.get("natural_scenes", None)
+                ),
             }
 
             final_splits_dict, session_start, session_end = collate_splits(
