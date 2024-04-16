@@ -7,6 +7,7 @@ class Species(StringIntEnum):
     HOMO_SAPIENS = HUMAN = 2
     MUS_MUSCULUS = 3
     MACACA_FASCICULARIS = NCBITaxon_9541 = 4
+    CAENORHABDITIS_ELEGANS = 5
 
 
 class Sex(StringIntEnum):

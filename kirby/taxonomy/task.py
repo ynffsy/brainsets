@@ -4,6 +4,9 @@ from .core import StringIntEnum
 class Task(StringIntEnum):
     REACHING = 0
 
+    # For datasets where no tasks are involved
+    FREE_BEHAVIOR = 1
+
     # A Shenoy-style task involving handwriting different characters.
     DISCRETE_WRITING_CHARACTER = 2
 
