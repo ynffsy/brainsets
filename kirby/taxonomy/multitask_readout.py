@@ -39,6 +39,7 @@ class Decoder(StringIntEnum):
     GABOR_ORIENTATION = 21  #
     GABOR_POS_2D = 27
     NATURAL_SCENES = 28
+    NATURAL_MOVIE_FRAME = 30
 
     # Openscope calcium
     UNEXPECTED_OR_NOT = 20  #
@@ -126,6 +127,15 @@ decoder_registry = {
         timestamp_key="drifting_gratings.timestamps",
         value_key="drifting_gratings.temp_freq",
         loss_fn="bce",
+    ),
+    str(Decoder.NATURAL_MOVIE_FRAME): DecoderSpec(  # For direct Cebra comparasion
+        dim=1,
+        target_dim=1,
+        target_dtype="float32",
+        type=OutputType.CONTINUOUS,
+        timestamp_key="natural_movie_one.timestamps",
+        value_key="natural_movie_one.frame_number",
+        loss_fn="mse",
     ),
     str(Decoder.STATIC_GRATINGS): DecoderSpec(
         dim=6,

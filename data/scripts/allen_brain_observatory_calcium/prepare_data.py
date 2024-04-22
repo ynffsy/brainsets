@@ -84,7 +84,7 @@ def get_roi_feats(ROI_masks, num_rois):
     return normalized_areas, normalized_heights, normalized_widths
 
 
-def extract_stim_trials(nwbfile):
+def extract_dg_stim_trials(nwbfile):
     timestamps, _ = nwbfile.get_dff_traces()
     master_stim_table = nwbfile.get_stimulus_table("drifting_gratings")
 
@@ -110,6 +110,54 @@ def extract_stim_trials(nwbfile):
     )
 
     return trials
+
+
+def extract_nm1_stim_trials(nwbfile):
+    timestamps, _ = nwbfile.get_dff_traces()
+    master_stim_table = nwbfile.get_stimulus_table("natural_movie_one")
+    stim_df = pd.DataFrame(master_stim_table)
+
+    start_times = timestamps[stim_df["start"].values]
+    end_times = timestamps[stim_df["end"].values]
+
+    frame_number = stim_df["frame"].values
+
+    trials = Interval(
+        start=np.array(start_times),
+        end=np.array(end_times),
+        timestamps=(np.array(start_times) + np.array(end_times)) / 2,
+        frame_number=np.array(frame_number).astype(np.float32),
+        timekeys=["start", "end", "timestamps"],
+    )
+
+    return trials
+
+
+def get_nm1_split(nwbfile):
+    timestamps, _ = nwbfile.get_dff_traces()
+    master_stim_table = nwbfile.get_stimulus_table("natural_movie_one")
+    stim_df = pd.DataFrame(master_stim_table)
+
+    start_times = []
+    end_times = []
+    for i in range(10):
+        curr_start = stim_df.loc[
+            (stim_df["repeat"] == i) & (stim_df["frame"] == 0.0), "start"
+        ].values[0]
+        start_times.append(timestamps[curr_start])
+        curr_end = stim_df.loc[
+            (stim_df["repeat"] == i) & (stim_df["frame"] == 899.0), "end"
+        ].values[0]
+        end_times.append(timestamps[curr_end])
+
+    natural_movie_one_split = Interval(
+        start=np.array(start_times),
+        end=np.array(end_times),
+        mv_start=np.array(start_times),
+        repeat_num=np.array([0, 1, 2, ..., 9]).astype(np.int64),
+        timekeys=["start", "end", "mv_start"],  # Not sure what this should be
+    )
+    return natural_movie_one_split
 
 
 def get_maps():
@@ -248,7 +296,8 @@ def main():
             calcium_traces = extract_calcium_traces(nwbfile)
             units = extract_units(nwbfile)
 
-            drifting_gratings = extract_stim_trials(nwbfile)
+            drifting_gratings = extract_dg_stim_trials(nwbfile)
+            natural_movie_one = extract_nm1_stim_trials(nwbfile)
 
             session.register_sortset(id=sortset_id, units=units)
 
@@ -256,6 +305,7 @@ def main():
                 calcium_traces=calcium_traces,
                 units=units,
                 drifting_gratings=drifting_gratings,
+                natural_movie_one=natural_movie_one,
                 domain=calcium_traces.domain,
             )
 
@@ -266,9 +316,15 @@ def main():
                 [0.7, 0.1, 0.2], shuffle=True, random_seed=42
             )
 
-            session.register_split("train", train_trials)
-            session.register_split("valid", valid_trials)
-            session.register_split("test", test_trials)
+            natural_movie_one_split = get_nm1_split(nwbfile)
+            # splitting natural movie one stimulus the same way as cebra PLEASE CHECK!
+            nm1_train_trials, nm1_valid_trials, nm1_test_trials = (
+                natural_movie_one_split.split([0.8, 0.1, 0.1], shuffle=False)
+            )
+
+            session.register_split("train", train_trials | nm1_train_trials)
+            session.register_split("valid", valid_trials | nm1_valid_trials)
+            session.register_split("test", test_trials | nm1_test_trials)
 
             # stim_trials.allow_split_mask_overlap()
 
