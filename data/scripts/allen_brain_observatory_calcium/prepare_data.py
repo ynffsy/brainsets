@@ -126,7 +126,7 @@ def extract_nm1_stim_trials(nwbfile):
         start=np.array(start_times),
         end=np.array(end_times),
         timestamps=(np.array(start_times) + np.array(end_times)) / 2,
-        frame_number=np.array(frame_number).astype(np.float32),
+        frame_number=np.array(frame_number).astype(np.float32).reshape(-1, 1),
         timekeys=["start", "end", "timestamps"],
     )
 
@@ -154,7 +154,7 @@ def get_nm1_split(nwbfile):
         start=np.array(start_times),
         end=np.array(end_times),
         mv_start=np.array(start_times),
-        repeat_num=np.array([0, 1, 2, ..., 9]).astype(np.int64),
+        repeat_num=np.arange(10).astype(np.int64),
         timekeys=["start", "end", "mv_start"],  # Not sure what this should be
     )
     return natural_movie_one_split
@@ -321,6 +321,8 @@ def main():
             nm1_train_trials, nm1_valid_trials, nm1_test_trials = (
                 natural_movie_one_split.split([0.8, 0.1, 0.1], shuffle=False)
             )
+
+            data.natural_movie_one_epochs = natural_movie_one_split
 
             session.register_split("train", train_trials | nm1_train_trials)
             session.register_split("valid", valid_trials | nm1_valid_trials)
