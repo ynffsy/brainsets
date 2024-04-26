@@ -186,7 +186,7 @@ decoder_registry = {
         target_dim=1,
         type=OutputType.CONTINUOUS,
         timestamp_key="running_speed.timestamps",
-        value_key="running_speed.normalized_running_speed",
+        value_key="running_speed.running_speed",
         loss_fn="mse",
     ),
     str(Decoder.GAZE_POS_2D): DecoderSpec(

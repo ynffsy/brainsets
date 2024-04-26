@@ -121,11 +121,7 @@ def extract_gabors(stimulus_pres):
     def calculate_gabors_pos2d(row):
         x_class = np.where(unique_x_pos == row["x_position"])[0][0]
         y_class = np.where(unique_y_pos == row["y_position"])[0][0]
-        # Scale x_class and y_class to the range -1 to 1
-        # from original range 0 to 8
-        x_class_scaled = (2 * x_class / 8) - 1
-        y_class_scaled = (2 * y_class / 8) - 1
-        return np.array([x_class_scaled, y_class_scaled])
+        return np.array([x_class, y_class])
 
     gabors_start_times = gabors_presentations["start_time"].values
     gabors_end_times = gabors_presentations["stop_time"].values
@@ -180,12 +176,9 @@ def extract_running_speed(session):
             .values.astype(np.float32)
             .reshape(-1, 1),  # continues values needs to be 2 dimensional
         )
-        running_speed_obj.normalized_running_speed = (
-            running_speed_obj.running_speed - np.min(running_speed_obj.running_speed)
-        ) / (
-            np.max(running_speed_obj.running_speed)
-            - np.min(running_speed_obj.running_speed)
-        ) * 2 - 1
+    # NOTE: we don't normalize or z-scale the target values here,
+    # as they should be done post-processing, seperately using data/scripts/calculate_zscales.py
+    # and updated into the dataset config yaml manually for the model to scale dynamically
     return running_speed_obj
 
 
@@ -231,27 +224,14 @@ def extract_gaze(session):
         ].values.astype(np.float32),
     )
 
-    # normalize filtered_screen_coordinates_x_cm and filtered_screen_coordinates_y_cm between -1 to 1
-    gaze_obj.normalized_filtered_screen_coordinates_x_cm = (
-        gaze_obj.filtered_screen_coordinates_x_cm
-        - np.min(gaze_obj.filtered_screen_coordinates_x_cm)
-    ) / (
-        np.max(gaze_obj.filtered_screen_coordinates_x_cm)
-        - np.min(gaze_obj.filtered_screen_coordinates_x_cm)
-    ) * 2 - 1
-    gaze_obj.normalized_filtered_screen_coordinates_y_cm = (
-        gaze_obj.filtered_screen_coordinates_y_cm
-        - np.min(gaze_obj.filtered_screen_coordinates_y_cm)
-    ) / (
-        np.max(gaze_obj.filtered_screen_coordinates_y_cm)
-        - np.min(gaze_obj.filtered_screen_coordinates_y_cm)
-    ) * 2 - 1
-
     # store in pos_2d attribute
+    # NOTE: we don't normalize or z-scale the target values here,
+    # as they should be done post-processing, seperately using data/scripts/calculate_zscales.py
+    # and updated into the dataset config yaml manually for the model to scale dynamically
     gaze_obj.pos_2d = np.stack(
         [
-            gaze_obj.normalized_filtered_screen_coordinates_x_cm,
-            gaze_obj.normalized_filtered_screen_coordinates_y_cm,
+            gaze_obj.filtered_screen_coordinates_x_cm,
+            gaze_obj.filtered_screen_coordinates_y_cm,
         ],
         axis=-1,
     )  # (N, 2)
@@ -295,15 +275,11 @@ def extract_pupil(session):
         eye_phi=pupil_df["eye_phi"].values.astype(np.float32),
     )
 
-    # normalize each pupil feature between -1 to 1
-    pupil_obj.normalized_pupil_height = (
-        pupil_obj.pupil_height - np.min(pupil_obj.pupil_height)
-    ) / (np.max(pupil_obj.pupil_height) - np.min(pupil_obj.pupil_height)) * 2 - 1
-    pupil_obj.normalized_pupil_width = (
-        pupil_obj.pupil_width - np.min(pupil_obj.pupil_width)
-    ) / (np.max(pupil_obj.pupil_width) - np.min(pupil_obj.pupil_width)) * 2 - 1
+    # NOTE: we don't normalize or z-scale the target values here,
+    # as they should be done post-processing, seperately using data/scripts/calculate_zscales.py
+    # and updated into the dataset config yaml manually for the model to scale dynamically
     pupil_obj.size_2d = np.stack(
-        [pupil_obj.normalized_pupil_height, pupil_obj.normalized_pupil_width], axis=-1
+        [pupil_obj.pupil_height, pupil_obj.pupil_width], axis=-1
     )  # (N, 2)
 
     return pupil_obj
