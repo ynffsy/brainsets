@@ -190,6 +190,20 @@ def get_maps():
     return cre_line_map, sex_map, vis_area_map
 
 
+def get_depth_mapping(nwbfile):
+    depth = nwbfile.get_metadata()["imaging_depth_um"]
+    if depth <= 250:
+        return Depth_classes.DEPTH_CLASS_1
+    elif depth <= 350:
+        return Depth_classes.DEPTH_CLASS_2
+    elif depth <= 500:
+        return Depth_classes.DEPTH_CLASS_3
+    elif depth <= 600:
+        return Depth_classes.DEPTH_CLASS_4
+    else:
+        return Depth_classes.DEPTH_CLASS_5
+
+
 def extract_calcium_traces(nwbfile):
     timestamps, traces = nwbfile.get_dff_traces()
     traces = np.transpose(traces)
@@ -277,6 +291,8 @@ def main():
                 species=Species.MUS_MUSCULUS,
                 sex=sex_map[session_meta_data["sex"]],
                 cre_line=cre_line_map[session_meta_data["cre_line"]],
+                depth=str(session_meta_data["imaging_depth_um"]),
+                depth_class=get_depth_mapping(nwbfile),
                 target_area=vis_area_map[session_meta_data["targeted_structure"]],
             )
 

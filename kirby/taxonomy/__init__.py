@@ -17,7 +17,7 @@ from .multitask_readout import (
 )
 
 from .macaque import Macaque
-from .mice import Cre_line
+from .mice import Cre_line, Depth_classes
 
 from .recording_tech import (
     RecordingTech,

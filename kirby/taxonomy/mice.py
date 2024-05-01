@@ -39,3 +39,12 @@ class Vis_areas(StringIntEnum):
     VIS_AM = 3
     VIS_P = 4
     VIS_L = 5
+
+
+class Depth_classes(StringIntEnum):
+    # classes based on Allen Brain Observatory base: https://observatory.brain-map.org/visualcoding/
+    DEPTH_CLASS_1 = 0  # 150-250 um
+    DEPTH_CLASS_2 = 1  # 250-350 um
+    DEPTH_CLASS_3 = 2  # 350-500 um
+    DEPTH_CLASS_4 = 3  # 500-600 um
+    DEPTH_CLASS_5 = 4  # 600+ um

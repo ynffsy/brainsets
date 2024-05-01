@@ -49,6 +49,7 @@ class SubjectDescription(Dictable):
     genotype: str = "unknown"  # no idea how many there will be for now.
     cre_line: Optional[Cre_line] = None
     target_area: Optional[Vis_areas] = None
+    depth_class: Optional[Depth_classes] = None
 
 
 @dataclass
