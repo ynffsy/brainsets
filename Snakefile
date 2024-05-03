@@ -30,6 +30,12 @@ module allen_brain_observatory_calcium_module:
 use rule * from allen_brain_observatory_calcium_module as allen_brain_observatory_calcium_*
 use rule all from allen_brain_observatory_calcium_module as allen_brain_observatory_calcium
 
+module allen_natural_movie_calcium_module:
+    snakefile: "data/scripts/allen_natural_movie_calcium/Snakefile"
+    config: config
+use rule * from allen_natural_movie_calcium_module as allen_natural_movie_calcium_*
+use rule all from allen_natural_movie_calcium_module as allen_natural_movie_calcium
+
 module allen_visual_behavior_neuropixels_module:
     snakefile: "data/scripts/allen_visual_behavior_neuropixels/Snakefile"
     config: config
