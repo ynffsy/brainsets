@@ -108,6 +108,13 @@ module orsborn_lab_ecog_reaching_2024_module:
 use rule * from orsborn_lab_ecog_reaching_2024_module as orsborn_lab_ecog_reaching_2024_*
 use rule all from orsborn_lab_ecog_reaching_2024_module as orsborn_lab_ecog_reaching_2024
 
+
+module yu_smith_selective_2022_module:
+    snakefile: "data/scripts/yu_smith_selective_2022/Snakefile"
+    config: config
+use rule * from yu_smith_selective_2022_module as yu_smith_selective_2022_*
+use rule all from yu_smith_selective_2022_module as yu_smith_selective_2022
+
 # make rules that combine multiple datasets
 rule poyo_neurips:
     input:

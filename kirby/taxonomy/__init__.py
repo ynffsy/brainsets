@@ -15,7 +15,7 @@ from .multitask_readout import (
     OutputType,
     decoder_registry,
 )
-
+from .drifting_gratings import Orientation_8_Classes
 from .macaque import Macaque
 from .mice import Cre_line, Depth_classes
 
