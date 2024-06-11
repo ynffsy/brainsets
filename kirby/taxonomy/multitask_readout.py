@@ -128,18 +128,7 @@ decoder_registry = {
         value_key="drifting_gratings.temp_freq",
         loss_fn="bce",
     ),
-    # str(Decoder.NATURAL_MOVIE_FRAME): DecoderSpec(  # For direct Cebra comparasion
-    #    dim=1,
-    #    target_dim=1,
-    #    target_dtype="float32",
-    #    type=OutputType.CONTINUOUS,
-    #    timestamp_key="natural_movie_one.timestamps",
-    #    value_key="natural_movie_one.frame_number",
-    #    loss_fn="mse",
-    # ),
-    str(
-        Decoder.NATURAL_MOVIE_FRAME
-    ): DecoderSpec(  # For direct Cebra comparasion - discrete version
+    str(Decoder.NATURAL_MOVIE_FRAME): DecoderSpec(  # For direct Cebra comparasion
         dim=900,
         target_dim=1,
         target_dtype="long",
