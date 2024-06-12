@@ -1,8 +1,8 @@
 import pytest
 import tempfile
 
-from kirby.data.dataset_builder import DatasetBuilder
-from kirby.taxonomy import Species
+from brainsets_utils import DatasetBuilder
+from brainsets_utils.taxonomy import Species
 
 
 @pytest.fixture
