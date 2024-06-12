@@ -23,6 +23,7 @@ setup(
         "msgpack~=1.0.5",
         "snakemake~=7.32.3",
         "pydantic~=2.0",
+        "pulp==2.7.0",
     ],
     extras_require={
         "dev": [
