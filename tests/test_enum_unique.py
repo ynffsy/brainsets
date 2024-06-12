@@ -1,5 +1,5 @@
 import pytest
-from kirby.taxonomy import Decoder
+from brainsets_utils.taxonomy import Decoder
 
 
 def find_duplicates(enum):

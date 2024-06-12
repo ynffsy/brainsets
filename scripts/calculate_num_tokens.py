@@ -2,7 +2,7 @@ from tqdm import tqdm
 from pathlib import Path
 
 import yaml
-from kirby.data.dataset import Dataset
+from brainsets_utils.utils.dataset import Dataset
 
 
 if __name__ == "__main__":
