@@ -1,5 +1,9 @@
 import numpy as np
-from brainsets_utils.processing.signal import downsample_wideband, extract_bands, cube_to_long
+from brainsets_utils.processing.signal import (
+    downsample_wideband,
+    extract_bands,
+    cube_to_long,
+)
 
 
 def test_extract_bands():

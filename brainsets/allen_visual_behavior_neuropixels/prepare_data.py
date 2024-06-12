@@ -18,7 +18,13 @@ from temporaldata import (
 
 from brainsets_utils import DatasetBuilder
 
-from brainsets_utils.taxonomy import RecordingTech, Species, SubjectDescription, Sex, Task
+from brainsets_utils.taxonomy import (
+    RecordingTech,
+    Species,
+    SubjectDescription,
+    Sex,
+    Task,
+)
 
 from allensdk.brain_observatory.ecephys.ecephys_project_cache import EcephysProjectCache
 from tqdm import tqdm

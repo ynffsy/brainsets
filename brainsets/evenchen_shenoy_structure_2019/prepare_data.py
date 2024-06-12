@@ -17,7 +17,10 @@ from temporaldata import (
 
 
 from brainsets_utils import DatasetBuilder, find_files_by_extension
-from brainsets_utils.dandi_utils import extract_spikes_from_nwbfile, extract_subject_from_nwb
+from brainsets_utils.dandi_utils import (
+    extract_spikes_from_nwbfile,
+    extract_subject_from_nwb,
+)
 from brainsets_utils.taxonomy import RecordingTech, Task
 
 logging.basicConfig(level=logging.INFO)
