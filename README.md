@@ -3,7 +3,7 @@
 **brainsets** is a Python package for processing neural data into a standardized format.
 
 ## Installation
-brainsets is available for Python 3.8 to Python 3.11
+brainsets is available for Python 3.9 to Python 3.11
 
 To install the package, run the following command:
 ```bash
