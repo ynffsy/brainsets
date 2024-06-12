@@ -15,6 +15,7 @@ from temporaldata import (
 from brainsets_utils import DatasetBuilder, find_files_by_extension
 from brainsets_utils.taxonomy import Species, Task
 
+
 def extract_labeled(data):
     labeldict = {}
     # Used units is the number units tracked in the neural data

@@ -21,7 +21,7 @@ from temporaldata import (
 )
 from brainsets_utils import DatasetBuilder, find_files_by_extension
 from brainsets_utils.taxonomy import (
-    RecordingTech, 
+    RecordingTech,
     Task,
     SubjectDescription,
     Sex,
