@@ -32,7 +32,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --no-user --upgrade pip 
-        pip install --no-user -e ".[dev,mne]" 
+        pip install --no-user --no-deps -e ".[dev,mne]" 
     - name: Install plugin
       run: pip install pytest-github-actions-annotate-failures
     - name: Test with pytest
