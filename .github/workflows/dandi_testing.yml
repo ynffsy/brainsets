@@ -32,7 +32,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --no-user --upgrade pip 
-        pip install --no-user -e ".[dandi]"
+        pip install --no-user --no-deps -e ".[dandi]"
     - name: Download sample dataset
       run: |
         snakemake --cores 4 mc_maze_small
