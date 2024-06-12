@@ -28,7 +28,7 @@ rule download_all:
 rule prepare_data:
     input:
         f"{RAW_DIR}/{DATASET}/handwritingBCIData/Datasets/t5.2019.11.25/singleLetters.mat",
-        py_script = f"data/scripts/{DATASET}/prepare_data.py",
+        py_script = f"brainsets/{DATASET}/prepare_data.py",
     output:
         f"{PROCESSED_DIR}/{DATASET}/description.mpk"
     shell:

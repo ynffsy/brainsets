@@ -192,7 +192,7 @@ def extract_running_speed(session):
             .reshape(-1, 1),  # continues values needs to be 2 dimensional
         )
     # NOTE: we don't normalize or z-scale the target values here,
-    # as they should be done post-processing, seperately using data/scripts/calculate_zscales.py
+    # as they should be done post-processing, seperately using brainsets/calculate_zscales.py
     # and updated into the dataset config yaml manually for the model to scale dynamically
     return running_speed_obj
 
@@ -241,7 +241,7 @@ def extract_gaze(session):
 
     # store in pos_2d attribute
     # NOTE: we don't normalize or z-scale the target values here,
-    # as they should be done post-processing, seperately using data/scripts/calculate_zscales.py
+    # as they should be done post-processing, seperately using brainsets/calculate_zscales.py
     # and updated into the dataset config yaml manually for the model to scale dynamically
     gaze_obj.pos_2d = np.stack(
         [
@@ -291,7 +291,7 @@ def extract_pupil(session):
     )
 
     # NOTE: we don't normalize or z-scale the target values here,
-    # as they should be done post-processing, seperately using data/scripts/calculate_zscales.py
+    # as they should be done post-processing, seperately using brainsets/calculate_zscales.py
     # and updated into the dataset config yaml manually for the model to scale dynamically
     pupil_obj.size_2d = np.stack(
         [pupil_obj.pupil_height, pupil_obj.pupil_width], axis=-1

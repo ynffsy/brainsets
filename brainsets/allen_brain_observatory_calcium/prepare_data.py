@@ -30,7 +30,7 @@ from brainsets_utils import DatasetBuilder, find_files_by_extension
 logging.basicConfig(level=logging.INFO)
 
 # copying from neuropixel dataloader:
-# https://github.com/nerdslab/project-kirby/blob/venky/allen/data/scripts/allen_visual_behavior_neuropixels/prepare_data.py
+# https://github.com/nerdslab/project-kirby/blob/venky/allen/brainsets/allen_visual_behavior_neuropixels/prepare_data.py
 WINDOW_SIZE = 1.0
 STEP_SIZE = 0.5
 JITTER_PADDING = 0.25
