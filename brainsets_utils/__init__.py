@@ -6,3 +6,5 @@ from . import processing
 
 from . import mat_utils
 from . import dandi_utils
+
+__version__ = "0.1.0"
