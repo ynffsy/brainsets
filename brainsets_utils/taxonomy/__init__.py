@@ -27,9 +27,8 @@ from .recording_tech import (
 )
 
 from .descriptors import (
-    DandisetDescription,
+    BrainsetDescription,
     SubjectDescription,
-    SortsetDescription,
+    DeviceDescription,
     SessionDescription,
-    to_serializable,
 )
