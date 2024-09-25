@@ -329,16 +329,16 @@ def extract_pupil_info(nwbfile):
     return pupil
 
 
-def extract_stimulus_epochs(data):
+def extract_stimulus_epochs(nwbfile):
     r"""Extracts the stimulus epochs from a given session. An epoch is defined as a
     contiguous period of time during which a stimulus is presented. Most stimuli will
     be presented once or three times in a session.
     Returns a dictionary where the keys are the stimulus names and the values are
     intervals representing the epochs of that stimulus.
     """
-    timestamps, _ = data.get_dff_traces()
+    timestamps, _ = nwbfile.get_dff_traces()
     try:
-        df = data.get_stimulus_epoch_table()
+        df = nwbfile.get_stimulus_epoch_table()
     except EpochSeparationException as e:
         print(f"An error occurred while getting the stimulus epoch table: {e}")
         return None
@@ -349,11 +349,11 @@ def extract_stimulus_epochs(data):
         .to_dict()
     )
 
-    epoch_dict = {f"{k}_epochs": Interval.from_list(v) for k, v in epoch_dict.items()}
+    epoch_dict = {f"{k}_domain": Interval.from_list(v) for k, v in epoch_dict.items()}
 
-    # allow split mask overlap
-    for epoch in epoch_dict.values():
-        epoch.allow_split_mask_overlap()
+    # # allow split mask overlap
+    # for epoch in epoch_dict.values():
+    #     epoch.allow_split_mask_overlap()
 
     return epoch_dict
 
@@ -388,7 +388,7 @@ def main():
     # extract subject metadata
     session_meta_data = nwbfile.get_metadata()
     subject = SubjectDescription(
-        id=str(session_id),
+        id=str(session_meta_data["experiment_container_id"]),
         species=Species.MUS_MUSCULUS,
         age=session_meta_data["age_days"],
         sex=Sex.from_string(session_meta_data["sex"]),
@@ -480,6 +480,7 @@ def main():
         **stimuli_and_behavior_dict,
         # domain
         domain=calcium_traces.domain,
+        **epoch_dict,
     )
 
     # make grid along which splits will be allowed
@@ -495,6 +496,10 @@ def main():
     data.train_domain = train_intervals
     data.valid_domain = valid_intervals
     data.test_domain = test_intervals
+
+    data.add_split_mask("train", train_intervals)
+    data.add_split_mask("valid", valid_intervals)
+    data.add_split_mask("test", test_intervals)
 
     # save data to disk
     path = os.path.join(args.output_dir, f"{session_id}.h5")
