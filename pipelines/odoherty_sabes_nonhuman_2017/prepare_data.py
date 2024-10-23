@@ -1,32 +1,35 @@
 import argparse
 import datetime
 import logging
+import os
 from pathlib import Path
 from typing import List, Tuple
 
-from brainsets.processing import signal
 import h5py
 import numpy as np
+import pandas as pd
 from scipy.ndimage import binary_dilation
 from tqdm import tqdm
-import pandas as pd
 
-from temporaldata import (
-    Data,
-    RegularTimeSeries,
-    IrregularTimeSeries,
-    Interval,
-    ArrayDict,
-)
-from brainsets import DatasetBuilder, find_files_by_extension
+from brainsets import find_files_by_extension, serialize_fn_map
+from brainsets.processing import signal
 from brainsets.taxonomy import (
+    BrainsetDescription,
+    Channel,
     Macaque,
+    Probe,
     RecordingTech,
+    SessionDescription,
     Species,
     SubjectDescription,
     Task,
-    Channel,
-    Probe,
+)
+from temporaldata import (
+    ArrayDict,
+    Data,
+    Interval,
+    IrregularTimeSeries,
+    RegularTimeSeries,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -454,12 +457,9 @@ def main():
 
     args = parser.parse_args()
 
-    # intiantiate a DatasetBuilder which provides utilities for processing data
-    db = DatasetBuilder(
-        raw_folder_path=args.input_dir,
-        processed_folder_path=args.output_dir,
-        # metadata for the dataset
-        experiment_name="odoherty_sabes_nonhuman_2017",
+    # intiantiate a BrainsetDescription which provides utilities for processing data
+    brainset_description = BrainsetDescription(
+        id="odoherty_sabes_nonhuman_2017",
         origin_version="583331",  # Zenodo version
         derived_version="1.0.0",  # This variant
         source="https://zenodo.org/record/583331",
@@ -475,109 +475,100 @@ def main():
     probes = extract_probe_description()
 
     # find all files with extension .mat in folder_path
-    for file_path in sorted(find_files_by_extension(db.raw_folder_path, ".mat")):
+    for file_path in sorted(find_files_by_extension(args.input_dir, ".mat")):
         logging.info(f"Processing file: {file_path}")
 
         # each file contains data from one session. a session is unique and has one
         # associated subject and one associated sortset.
-        with db.new_session() as session:
-            # load file
-            h5file = h5py.File(file_path, "r")
+        # load file
+        h5file = h5py.File(file_path, "r")
 
-            # extract experiment metadata
-            # determine session_id and sortset_id
-            session_id = Path(file_path).stem  # type: ignore
+        # extract experiment metadata
+        # determine session_id and sortset_id
+        session_id = Path(file_path).stem  # type: ignore
 
-            # TODO do recording from the same day share the same sortset
-            sortset_id = session_id[:-3]
-            assert sortset_id.count("_") == 1, f"Unexpected file name: {sortset_id}"
+        # TODO do recording from the same day share the same sortset
+        sortset_id = session_id[:-3]
+        assert sortset_id.count("_") == 1, f"Unexpected file name: {sortset_id}"
 
-            # get subject and recording date from sortset_id
-            animal, recording_date = sortset_id.split("_")
-            # TODO we don't have any info about age or sex for these subjects
-            subject = SubjectDescription(
-                id=animal,
-                species=Species.MACACA_MULATTA,
-            )
-            session.register_subject(subject)
+        # get subject and recording date from sortset_id
+        animal, recording_date = sortset_id.split("_")
+        # TODO we don't have any info about age or sex for these subjects
+        subject = SubjectDescription(
+            id=animal,
+            species=Species.MACACA_MULATTA,
+        )
 
-            # register session
-            session.register_session(
-                id=session_id,
-                recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
-                task=Task.REACHING,
-            )
+        # register session
+        session_description = SessionDescription(
+            id=session_id,
+            recording_date=datetime.datetime.strptime(recording_date, "%Y%m%d"),
+            task=Task.REACHING,
+        )
 
-            # extract spiking activity, unit metadata and channel names info
-            spikes, units, chan_names = extract_spikes(h5file)
+        # extract spiking activity, unit metadata and channel names info
+        spikes, units, chan_names = extract_spikes(h5file)
 
-            # register sortset
-            session.register_sortset(
-                id=session_id,  # sortset_id,
-                units=units,
-            )
+        # extract behavior
+        cursor, finger = extract_behavior(h5file)
 
-            # extract behavior
-            cursor, finger = extract_behavior(h5file)
+        # since this dataset has both LFP and spike data, we first check if
+        # broadband datasets exist.
+        # check if the broadband data file exists.
+        broadband_path = Path(args.input_dir) / "broadband" / f"{session_id}.nwb"
+        broadband = broadband_path.exists()
 
-            # since this dataset has both LFP and spike data, we first check if
-            # broadband datasets exist.
-            # check if the broadband data file exists.
-            broadband_path = (
-                Path(db.raw_folder_path) / "broadband" / f"{session_id}.nwb"
-            )
-            broadband = broadband_path.exists()
-
-            # extract Local Field Potential (LFP) data if exists
-            extras = dict()
-            if broadband:
-                # Load the associated broadband data.
-                broadband_file = h5py.File(broadband_path, "r")
-                extras["lfps"], extras["lfp_channels"], extras["lfp_band_names"] = (
-                    extract_lfp(broadband_file, chan_names)
-                )
-
-            # extract probes relevant to our particular session using channel info
-            relevant_probes = extract_relevant_probes(
-                probes, chan_names, animal, sortset_id
+        # extract Local Field Potential (LFP) data if exists
+        extras = dict()
+        if broadband:
+            # Load the associated broadband data.
+            broadband_file = h5py.File(broadband_path, "r")
+            extras["lfps"], extras["lfp_channels"], extras["lfp_band_names"] = (
+                extract_lfp(broadband_file, chan_names)
             )
 
-            data = Data(
-                probes=relevant_probes,
-                # neural activity
-                spikes=spikes,
-                units=units,
-                # stimuli and behavior
-                cursor=cursor,
-                finger=finger,
-                # other info like LFP
-                **extras,
-                domain=cursor.domain,
-            )
+        # extract probes relevant to our particular session using channel info
+        relevant_probes = extract_relevant_probes(
+            probes, chan_names, animal, sortset_id
+        )
 
-            session.register_data(data)
+        # close file
+        h5file.close()
 
-            # slice the session into 10 blocks then randomly split them into train,
-            # validation and test sets, using a 8/1/1 ratio.
-            intervals = Interval.linspace(data.domain.start[0], data.domain.end[-1], 10)
-            [
-                train_sampling_intervals,
-                valid_sampling_intervals,
-                test_sampling_intervals,
-            ] = intervals.split([8, 1, 1], shuffle=True, random_seed=42)
+        # register session
+        data = Data(
+            brainset=brainset_description,
+            subject=subject,
+            session=session_description,
+            probes=relevant_probes,
+            # neural activity
+            spikes=spikes,
+            units=units,
+            # stimuli and behavior
+            cursor=cursor,
+            finger=finger,
+            # other info like LFP
+            **extras,
+            domain=cursor.domain,
+        )
 
-            # save samples
-            session.register_split("train", train_sampling_intervals)
-            session.register_split("valid", valid_sampling_intervals)
-            session.register_split("test", test_sampling_intervals)
+        # slice the session into 10 blocks then randomly split them into train,
+        # validation and test sets, using a 8/1/1 ratio.
+        intervals = Interval.linspace(data.domain.start[0], data.domain.end[-1], 10)
+        [
+            train_sampling_intervals,
+            valid_sampling_intervals,
+            test_sampling_intervals,
+        ] = intervals.split([8, 1, 1], shuffle=True, random_seed=42)
 
-            # save data to disk
-            session.save_to_disk()
+        data.set_train_domain(train_sampling_intervals)
+        data.set_valid_domain(valid_sampling_intervals)
+        data.set_test_domain(test_sampling_intervals)
 
-            # close the file
-            h5file.close()
-
-    db.finish()
+        # save data to disk
+        path = os.path.join(args.output_dir, f"{session_id}.h5")
+        with h5py.File(path, "w") as file:
+            data.to_hdf5(file, serialize_fn_map=serialize_fn_map)
 
 
 if __name__ == "__main__":
