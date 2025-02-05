@@ -21,8 +21,6 @@ from brainsets.utils.dandi_utils import (
 from brainsets.taxonomy import RecordingTech, Task
 from brainsets import serialize_fn_map
 
-import ipdb
-
 
 
 logging.basicConfig(level=logging.INFO)
@@ -64,8 +62,6 @@ def extract_trials(nwbfile, task, cursor):
         }
     )
     trials = Interval.from_dataframe(trial_table)
-
-    # ipdb.set_trace()
 
     # next we extract the different periods in the trials
     if task == "CenterStart" or task == "RadialGrid":
@@ -212,8 +208,6 @@ def main():
         # domain
         domain=cursor.domain,
     )
-
-    ipdb.set_trace()
 
     # split trials into train, validation and test
     successful_trials = trials.select_by_mask(trials.is_valid)
