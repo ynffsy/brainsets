@@ -43,6 +43,7 @@ def extract_behavior(nwbfile):
         timestamps=timestamps,
         pos=cursor_pos,
         vel=cursor_vel,
+        direction_to_target=target_pos - cursor_pos,
         domain="auto",
     )
 
