@@ -202,6 +202,20 @@ def main():
         units = units.select_by_mask(units.array == args.array)
         spikes = spikes.select_by_mask(spikes.unit_array == ImplantArea.array_str_to_int[args.array])
 
+        # Let remaining unit indices start from 0 consecutively
+        # Step 1: Create the map (number -> "rank"/index)
+        number_to_rank = {}
+        for rank, number in enumerate(units.unit_number):
+            number_to_rank[number] = rank
+        
+        # Step 2: Use the map to replace each element in data.spikes.unit_index
+        for i, val in enumerate(spikes.unit_index):
+            spikes.unit_index[i] = number_to_rank[val]
+
+        # Step 3: Use the map to replace each element in data.units.unit_number
+        for i, val in enumerate(units.unit_number):
+            units.unit_number[i] = number_to_rank[val]
+
     if not len(units):
         raise ValueError(f"No units found for array {args.array}")
 
