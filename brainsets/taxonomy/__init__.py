@@ -13,5 +13,6 @@ from .mice import Cre_line
 
 from .recording_tech import (
     RecordingTech,
+    ImplantArea,
     Hemisphere,
 )

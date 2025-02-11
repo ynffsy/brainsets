@@ -6,6 +6,7 @@ from temporaldata import ArrayDict, IrregularTimeSeries
 from brainsets.descriptions import SubjectDescription
 from brainsets.taxonomy import (
     RecordingTech,
+    ImplantArea,
     Sex,
     Species,
 )
@@ -70,7 +71,7 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
 
         if len(spiketimes) > 0:
             unit_index.append([i] * len(spiketimes))
-            unit_array.append([group_name] * len(spiketimes))
+            unit_array.append([ImplantArea.array_str_to_int[group_name]] * len(spiketimes))
 
         # extract unit metadata
         unit_meta.append(

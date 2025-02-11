@@ -18,10 +18,9 @@ from brainsets.utils.dandi_utils import (
     extract_spikes_from_nwbfile,
     extract_subject_from_nwb,
 )
-from brainsets.taxonomy import RecordingTech, Task
+from brainsets.taxonomy import RecordingTech, ImplantArea, Task
 from brainsets import serialize_fn_map
 
-import ipdb
 
 
 logging.basicConfig(level=logging.INFO)
@@ -165,7 +164,10 @@ def main():
 
     # extract experiment metadata
     recording_date = nwbfile.session_start_time.strftime("%Y%m%d")
-    device_id = f"{subject.id}_{args.array}_{recording_date}"
+    if args.array is not None:
+        device_id = f"{subject.id}_{args.array}_{recording_date}"
+    else:
+        device_id = f"{subject.id}_{recording_date}"
 
     # extract the task from the file name
     file_path = io._file.filename
@@ -198,7 +200,10 @@ def main():
     # filter out arrays that are not specified
     if args.array is not None:
         units = units.select_by_mask(units.array == args.array)
-        spikes = spikes.select_by_mask(spikes.unit_array == args.array)
+        spikes = spikes.select_by_mask(spikes.unit_array == ImplantArea.array_str_to_int[args.array])
+
+    if not len(units):
+        raise ValueError(f"No units found for array {args.array}")
 
     # extract behavior
     cursor = extract_behavior(nwbfile)

@@ -34,6 +34,26 @@ class Hemisphere(StringIntEnum):
     RIGHT = 2
 
 
+class ImplantArea:
+    array_int_to_str = {
+        0: "MC",
+        1: "MC-LAT",
+        2: "MC-MED",
+        11: "PPC",
+        12: "PPC-SPL",
+        13: "PPC-IPL",
+        }
+
+    array_str_to_int = {
+        "MC": 0,
+        "MC-LAT": 1,
+        "MC-MED": 2,
+        "PPC": 11,
+        "PPC-SPL": 12,
+        "PPC-IPL": 13,
+    }
+
+
 # @dataclass
 # class Channel(Dictable):
 #     """Channels are the physical channels used to record the data. Channels are grouped
