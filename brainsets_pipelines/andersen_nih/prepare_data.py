@@ -21,6 +21,7 @@ from brainsets.utils.dandi_utils import (
 from brainsets.taxonomy import RecordingTech, Task
 from brainsets import serialize_fn_map
 
+import ipdb
 
 
 logging.basicConfig(level=logging.INFO)
@@ -34,10 +35,20 @@ def extract_behavior(nwbfile):
         Cursor position and target position are in the same frame of reference.
         They are both of size (sequence_len, 2).
     """
+
     timestamps = nwbfile.acquisition['cursor_pos'].timestamps[:]
     cursor_pos = nwbfile.acquisition['cursor_pos'].data[:]  # 2d
     cursor_vel = nwbfile.acquisition['cursor_vel'].data[:]
     target_pos = nwbfile.acquisition['target_pos'].data[:]
+
+    # remove rows where target_pos is nan
+    mask = np.isnan(target_pos).any(axis=1)
+    rows_with_nan = np.where(mask)[0]
+    
+    timestamps = np.delete(timestamps, rows_with_nan)
+    cursor_pos = np.delete(cursor_pos, rows_with_nan, axis=0)
+    cursor_vel = np.delete(cursor_vel, rows_with_nan, axis=0)
+    target_pos = np.delete(target_pos, rows_with_nan, axis=0)
 
     cursor = IrregularTimeSeries(
         timestamps=timestamps,
@@ -128,6 +139,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_file", type=str)
     parser.add_argument("--output_dir", type=str, default="./processed")
+    parser.add_argument("--array",      type=str, default=None)
 
     args = parser.parse_args()
 
@@ -153,7 +165,7 @@ def main():
 
     # extract experiment metadata
     recording_date = nwbfile.session_start_time.strftime("%Y%m%d")
-    device_id = f"{subject.id}_{recording_date}"
+    device_id = f"{subject.id}_{args.array}_{recording_date}"
 
     # extract the task from the file name
     file_path = io._file.filename
@@ -179,8 +191,14 @@ def main():
     # extract spiking activity
     # NOTE: this currently does not care about what brain region each spike is from
     spikes, units = extract_spikes_from_nwbfile(
-        nwbfile, recording_tech=RecordingTech.UTAH_ARRAY_SPIKES
+        nwbfile, 
+        recording_tech=RecordingTech.UTAH_ARRAY_SPIKES,
     )
+
+    # filter out arrays that are not specified
+    if args.array is not None:
+        units = units.select_by_mask(units.array == args.array)
+        spikes = spikes.select_by_mask(spikes.unit_array == args.array)
 
     # extract behavior
     cursor = extract_behavior(nwbfile)

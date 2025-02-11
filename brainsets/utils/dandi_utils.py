@@ -42,6 +42,7 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
     # spikes
     timestamps = []
     unit_index = []
+    unit_array = []
 
     # units
     unit_meta = []
@@ -69,12 +70,14 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
 
         if len(spiketimes) > 0:
             unit_index.append([i] * len(spiketimes))
+            unit_array.append([group_name] * len(spiketimes))
 
         # extract unit metadata
         unit_meta.append(
             {
                 "id": unit_id,
                 "unit_number": i,
+                "array": group_name,
                 "count": len(spiketimes),
                 "type": int(recording_tech),
             }
@@ -90,11 +93,13 @@ def extract_spikes_from_nwbfile(nwbfile, recording_tech):
     # concatenate spikes
     timestamps = np.concatenate(timestamps)
     unit_index = np.concatenate(unit_index)
+    unit_array = np.concatenate(unit_array)
 
     # create spikes object
     spikes = IrregularTimeSeries(
         timestamps=timestamps,
         unit_index=unit_index,
+        unit_array=unit_array,
         domain="auto",
     )
 
