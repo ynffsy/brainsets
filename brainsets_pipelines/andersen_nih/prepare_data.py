@@ -92,6 +92,21 @@ def extract_trials(nwbfile, task, cursor):
                 end=valid_trials.end),
             domain="auto",
         )
+    
+    elif task == "CenterOut":
+        # isolate valid trials based on success
+        trials.is_valid = np.logical_and(
+            ~(np.isnan(trials.first_contact_time)),
+            trials.first_contact_time < 4.0,
+        )
+        valid_trials = trials.select_by_mask(trials.is_valid)
+
+        movement_phases = Data(
+            reach_period=Interval(
+                start=valid_trials.go_time, 
+                end=valid_trials.go_time + valid_trials.first_contact_time),
+            domain="auto",
+        )
 
     # everything outside of the different identified periods will be marked as random
     movement_phases.random_period = cursor.domain.difference(movement_phases.domain)
