@@ -6,7 +6,7 @@ import subprocess
 data_config = {
     'N1': {
         'arrays': [
-            # 'MC', 
+            'MC', 
             'PPC', 
             None,
         ],
@@ -29,7 +29,7 @@ data_config = {
     },
     'N2': {
         'arrays': [
-            # 'MC-LAT', 
+            'MC-LAT', 
             'MC-MED', 
             'PPC-SPL', 
             'PPC-IPL', 

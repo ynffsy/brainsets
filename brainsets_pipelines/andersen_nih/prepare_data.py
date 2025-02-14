@@ -6,6 +6,7 @@ import os
 
 import numpy as np
 from pynwb import NWBHDF5IO
+import pandas as pd
 from scipy.ndimage import binary_dilation, binary_erosion
 
 from temporaldata import Data, IrregularTimeSeries, Interval
@@ -20,6 +21,7 @@ from brainsets.utils.dandi_utils import (
 )
 from brainsets.taxonomy import RecordingTech, ImplantArea, Task
 from brainsets import serialize_fn_map
+import ipdb
 
 
 
@@ -54,6 +56,7 @@ def extract_behavior(nwbfile):
         pos=cursor_pos,
         vel=cursor_vel,
         direction_to_target=target_pos - cursor_pos,
+        target_pos=target_pos,
         domain="auto",
     )
 
@@ -94,9 +97,17 @@ def extract_trials(nwbfile, task, cursor):
         )
     
     elif task == "CenterOut":
+
+        # ipdb.set_trace()
+
         # isolate valid trials based on success
+        # also remove CAR trials
+        assist_col = pd.Series(trials.assist_level, dtype="object")
+        assist_mask = assist_col.str.contains("assist 0", na=False).values
+
         trials.is_valid = np.logical_and(
             ~(np.isnan(trials.first_contact_time)),
+            assist_mask,
             trials.first_contact_time < 4.0,
         )
         valid_trials = trials.select_by_mask(trials.is_valid)
@@ -231,8 +242,8 @@ def main():
         for i, val in enumerate(units.unit_number):
             units.unit_number[i] = number_to_rank[val]
 
-    if not len(units):
-        raise ValueError(f"No units found for array {args.array}")
+        if not len(units):
+            raise ValueError(f"No units found for array {args.array}")
 
     # extract behavior
     cursor = extract_behavior(nwbfile)
