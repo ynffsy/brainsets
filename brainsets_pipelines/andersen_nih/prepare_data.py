@@ -51,14 +51,18 @@ def extract_behavior(nwbfile):
     cursor_vel = np.delete(cursor_vel, rows_with_nan, axis=0)
     target_pos = np.delete(target_pos, rows_with_nan, axis=0)
 
+    direction_to_target = target_pos - cursor_pos
+
     cursor = IrregularTimeSeries(
         timestamps=timestamps,
         pos=cursor_pos,
         vel=cursor_vel,
-        direction_to_target=target_pos - cursor_pos,
+        direction_to_target=direction_to_target,
         target_pos=target_pos,
         domain="auto",
     )
+
+    print(f'cursor pos (mean/std): {np.abs(np.mean(cursor_pos)):.2f}/{np.std(cursor_pos):.2f} cursor vel (mean/std): {np.abs(np.mean(cursor_vel)):.2f}/{np.std(cursor_vel):.2f} target pos (mean/std): {np.abs(np.mean(target_pos)):.2f}/{np.std(target_pos):.2f} direction to target (mean/std): {np.abs(np.mean(direction_to_target)):.2f}/{np.std(direction_to_target):.2f}')
 
     return cursor
 
@@ -177,7 +181,7 @@ def main():
         description="",
     )
 
-    logging.info(f"Processing file: {args.input_file}")
+    # logging.info(f"Processing file: {args.input_file}")
 
     # open file
     io = NWBHDF5IO(args.input_file, "r")
