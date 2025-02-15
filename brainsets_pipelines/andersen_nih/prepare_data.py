@@ -22,6 +22,7 @@ from brainsets.utils.dandi_utils import (
 from brainsets.taxonomy import RecordingTech, ImplantArea, Task
 from brainsets import serialize_fn_map
 import ipdb
+import matplotlib.pyplot as plt
 
 
 
@@ -41,6 +42,7 @@ def extract_behavior(nwbfile):
     cursor_pos = nwbfile.acquisition['cursor_pos'].data[:]  # 2d
     cursor_vel = nwbfile.acquisition['cursor_vel'].data[:]
     target_pos = nwbfile.acquisition['target_pos'].data[:]
+    cursor_acc = np.gradient(cursor_vel, axis=0)
 
     # remove rows where target_pos is nan
     mask = np.isnan(target_pos).any(axis=1)
@@ -50,6 +52,7 @@ def extract_behavior(nwbfile):
     cursor_pos = np.delete(cursor_pos, rows_with_nan, axis=0)
     cursor_vel = np.delete(cursor_vel, rows_with_nan, axis=0)
     target_pos = np.delete(target_pos, rows_with_nan, axis=0)
+    cursor_acc = np.delete(cursor_acc, rows_with_nan, axis=0)
 
     direction_to_target = target_pos - cursor_pos
 
@@ -57,14 +60,37 @@ def extract_behavior(nwbfile):
         timestamps=timestamps,
         pos=cursor_pos,
         vel=cursor_vel,
+        acc=cursor_acc,
         direction_to_target=direction_to_target,
         target_pos=target_pos,
         domain="auto",
     )
 
-    print(f'cursor pos (mean/std): {np.abs(np.mean(cursor_pos)):.2f}/{np.std(cursor_pos):.2f} cursor vel (mean/std): {np.abs(np.mean(cursor_vel)):.2f}/{np.std(cursor_vel):.2f} target pos (mean/std): {np.abs(np.mean(target_pos)):.2f}/{np.std(target_pos):.2f} direction to target (mean/std): {np.abs(np.mean(direction_to_target)):.2f}/{np.std(direction_to_target):.2f}')
+    print(
+        f'cursor pos (mean/std): {np.abs(np.mean(cursor_pos)):.4f}/{np.std(cursor_pos):.4f} '
+        f'cursor vel (mean/std): {np.abs(np.mean(cursor_vel)):.4f}/{np.std(cursor_vel):.4f} ' 
+        f'cursor acc (mean/std): {np.abs(np.mean(cursor_acc)):.4f}/{np.std(cursor_acc):.4f} ' 
+        f'target pos (mean/std): {np.abs(np.mean(target_pos)):.4f}/{np.std(target_pos):.4f} ' 
+        f'direction to target (mean/std): {np.abs(np.mean(direction_to_target)):.4f}/{np.std(direction_to_target):.4f}')
 
     return cursor
+
+
+def visualize_behavior(nwbfile, cursor):
+
+    plt.figure(figsize=(10, 10))
+
+    # plt.plot(cursor.pos[:, 0], cursor.pos[:, 1], label='cursor position')
+    # plt.plot(cursor.target_pos[:, 0], cursor.target_pos[:, 1], label='target position')
+    plt.plot(cursor.direction_to_target[:, 0], cursor.direction_to_target[:, 1], label='direction to target')
+
+
+    plt.show()
+
+    ipdb.set_trace()
+
+
+
 
 
 def extract_trials(nwbfile, task, cursor):
@@ -109,11 +135,17 @@ def extract_trials(nwbfile, task, cursor):
         assist_col = pd.Series(trials.assist_level, dtype="object")
         assist_mask = assist_col.str.contains("assist 0", na=False).values
 
-        trials.is_valid = np.logical_and(
+        # allowed_values = ["assist 0", "assist 0 run 1", "assist 0 run 2"]
+        # assist_mask = assist_col.isin(allowed_values).values
+
+        # ipdb.set_trace()
+
+        trials.is_valid = np.logical_and.reduce((
             ~(np.isnan(trials.first_contact_time)),
             assist_mask,
             trials.first_contact_time < 4.0,
-        )
+            trials.target_index != 9,
+        ))
         valid_trials = trials.select_by_mask(trials.is_valid)
 
         movement_phases = Data(
@@ -123,8 +155,17 @@ def extract_trials(nwbfile, task, cursor):
             domain="auto",
         )
 
+        # movement_phases = Data(
+        #     reach_period=Interval(
+        #         start=valid_trials.go_time, 
+        #         end=valid_trials.go_time + 0.5),
+        #     domain="auto",
+        # )
+
     # everything outside of the different identified periods will be marked as random
     movement_phases.random_period = cursor.domain.difference(movement_phases.domain)
+
+    # ipdb.set_trace()
 
     return trials, movement_phases
 
@@ -252,6 +293,8 @@ def main():
     # extract behavior
     cursor = extract_behavior(nwbfile)
     # cursor_outlier_segments = detect_outliers(cursor)
+
+    # visualize_behavior(nwbfile, cursor)
 
     # extract data about trial structure
     trials, movement_phases = extract_trials(nwbfile, task, cursor)
