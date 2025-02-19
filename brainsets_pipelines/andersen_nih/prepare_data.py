@@ -90,9 +90,6 @@ def visualize_behavior(nwbfile, cursor):
     ipdb.set_trace()
 
 
-
-
-
 def extract_trials(nwbfile, task, cursor):
     r"""Extract trial information from the NWB file. Trials that are flagged as
     "to discard" or where the monkey failed are marked as invalid."""
@@ -127,18 +124,13 @@ def extract_trials(nwbfile, task, cursor):
         )
     
     elif task == "CenterOut":
-
-        # ipdb.set_trace()
-
         # isolate valid trials based on success
         # also remove CAR trials
-        assist_col = pd.Series(trials.assist_level, dtype="object")
-        assist_mask = assist_col.str.contains("assist 0", na=False).values
 
-        # allowed_values = ["assist 0", "assist 0 run 1", "assist 0 run 2"]
-        # assist_mask = assist_col.isin(allowed_values).values
-
-        # ipdb.set_trace()
+        # assist_mask = (trials.assist_level == 0) # Assist 0 only
+        assist_mask = (np.abs(trials.assist_level < 0.35)) # Low assist
+        # assist_mask = (trials.assist_level > -0.5) # Exclude CAR trials
+        # assist_mask = (np.abs(trials.assist_level) < 1) # Exclude CAR and open loop trials
 
         trials.is_valid = np.logical_and.reduce((
             ~(np.isnan(trials.first_contact_time)),
@@ -164,8 +156,6 @@ def extract_trials(nwbfile, task, cursor):
 
     # everything outside of the different identified periods will be marked as random
     movement_phases.random_period = cursor.domain.difference(movement_phases.domain)
-
-    # ipdb.set_trace()
 
     return trials, movement_phases
 
@@ -222,7 +212,7 @@ def main():
         description="",
     )
 
-    # logging.info(f"Processing file: {args.input_file}")
+    logging.info(f"Processing file: {args.input_file}")
 
     # open file
     io = NWBHDF5IO(args.input_file, "r")
