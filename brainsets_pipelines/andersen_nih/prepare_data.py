@@ -197,6 +197,7 @@ def extract_trials(nwbfile, task, cursor):
 def main():
     # use argparse to get arguments from the command line
     parser = argparse.ArgumentParser()
+    parser.add_argument("--brainset_id", type=str, default="andersen_nih")
     parser.add_argument("--input_file", type=str)
     parser.add_argument("--output_dir", type=str, default="./processed")
     parser.add_argument("--array",      type=str, default=None)
@@ -205,7 +206,7 @@ def main():
 
     # intiantiate a DatasetBuilder which provides utilities for processing data
     brainset_description = BrainsetDescription(
-        id="andersen_nih",
+        id=args.brainset_id,
         origin_version="",
         derived_version="",
         source="",
