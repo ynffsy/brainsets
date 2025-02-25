@@ -128,7 +128,7 @@ def extract_trials(nwbfile, task, cursor):
         # also remove CAR trials
 
         # assist_mask = (trials.assist_level == 0) # Assist 0 only
-        assist_mask = (np.abs(trials.assist_level < 0.35)) # Low assist
+        assist_mask = (np.abs(trials.assist_level) < 0.35) # Low assist
         # assist_mask = (trials.assist_level > -0.5) # Exclude CAR trials
         # assist_mask = (np.abs(trials.assist_level) < 1) # Exclude CAR and open loop trials
 
