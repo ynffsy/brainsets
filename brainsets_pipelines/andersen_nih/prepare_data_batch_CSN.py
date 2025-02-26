@@ -121,8 +121,8 @@ data_config = {
             '20241113',
             '20241119',
             '20241211',
-            '20241212', ## No assist 0 run
-            '20241224', ## No assist 0 run
+            '20241212', ## No assist 0 run or <0.35
+            '20241224', ## No assist 0 run or <0.35
             '20250107',
             '20250114',
             '20250128', ## No assist 0 run
