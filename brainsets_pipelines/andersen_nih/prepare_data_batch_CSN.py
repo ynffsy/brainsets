@@ -12,72 +12,72 @@ data_config = {
         ],
         'nwb_data_dir': '/home/ynffsy/Desktop/andersen_lab/data/neurogalaxy/raw/andersen_nih/N1',
         'CenterOut': [
-            '20230818',
-            '20230824',
-            '20230901',
-            '20230908',
-            '20230929',
-            '20231208',
-            '20240104', # No assist 0 run
-            '20240112', # No assist 0 run
-            '20240117', 
-            '20240119', # No assist 0 run
-            '20240126', # No assist 0 run
-            '20240201', # No assist 0 run
-            '20240202', 
-            '20240208', # No assist 0 run
-            '20240209', 
-            '20240214', # No assist 0 run
-            '20240215', # No assist 0 run
-            '20240222', # No assist 0 run
-            '20240223', # No assist 0 run
-            '20240229', # No assist 0 run
-            '20240306', # No assist 0 run
-            '20240313', 
-            '20240419', 
-            '20240424', 
-            '20240502', # No assist 0 run
-            '20240509', # No assist 0 run
-            '20240516', # No assist 0 run
-            '20240517', # No assist 0 run
-            '20240528', 
-            '20240529', # No assist 0 run
-            '20240605', # No assist 0 run
-            '20240606', # No assist 0 run
-            '20240607', # No assist 0 run
-            '20240612', # No assist 0 run
-            '20240613', # No assist 0 run
-            '20240614', # No assist 0 run
-            '20240627', # No assist 0 run
-            '20240705', # No assist 0 run
-            '20240719', 
-            '20240731', # No assist 0 run
-            '20240815', # No assist 0 run
-            '20240829', 
-            '20240912', 
-            '20240918', 
-            '20240927',
-            '20241003', # No assist 0 run
-            '20241011', # No assist 0 run
-            '20241018',
+            # '20230818',
+            # '20230824',
+            # '20230901',
+            # '20230908',
+            # '20230929',
+            # '20231208',
+            # '20240104', # No assist 0 run
+            # '20240112', # No assist 0 run
+            # '20240117', 
+            # '20240119', # No assist 0 run
+            # '20240126', # No assist 0 run
+            # '20240201', # No assist 0 run
+            # '20240202', 
+            # '20240208', # No assist 0 run
+            # '20240209', 
+            # '20240214', # No assist 0 run
+            # '20240215', # No assist 0 run
+            # '20240222', # No assist 0 run
+            # '20240223', # No assist 0 run
+            # '20240229', # No assist 0 run
+            # '20240306', # No assist 0 run
+            # '20240313', 
+            # '20240419', 
+            # '20240424', 
+            # '20240502', # No assist 0 run
+            # '20240509', # No assist 0 run
+            # '20240516', # No assist 0 run
+            # '20240517', # No assist 0 run
+            # '20240528', 
+            # '20240529', # No assist 0 run
+            # '20240605', # No assist 0 run
+            # '20240606', # No assist 0 run
+            # '20240607', # No assist 0 run
+            # '20240612', # No assist 0 run
+            # '20240613', # No assist 0 run
+            # '20240614', # No assist 0 run
+            # '20240627', # No assist 0 run
+            # '20240705', # No assist 0 run
+            # '20240719', 
+            # '20240731', # No assist 0 run
+            # '20240815', # No assist 0 run
+            # '20240829', 
+            # '20240912', 
+            # '20240918', 
+            # '20240927',
+            # '20241003', # No assist 0 run
+            # '20241011', # No assist 0 run
+            # '20241018',
         ],
     },
     'N2': {
         'arrays': [
-            'MC-LAT', 
-            'MC-MED', 
-            'PPC-SPL', 
-            'PPC-IPL', 
+            # 'MC-LAT', 
+            # 'MC-MED', 
+            # 'PPC-SPL', 
+            # 'PPC-IPL', 
             None,
         ],
-        'nwb_data_dir': '/home/ynffsy/Desktop/andersen_lab/data/neurogalaxy/raw/andersen_nih/N2',
+        'nwb_data_dir': '/home/ynffsy/Desktop/andersen_lab/data/neurogalaxy/raw/ALMG-100-SS/N2',
         'CenterOut': [
             '20240118', ## No assist 0 run
             '20240123',
             '20240126',
             '20240130',
             '20240201',
-            '20240206',
+            # '20240206',
             '20240208',
             '20240213',
             '20240215',
@@ -108,7 +108,7 @@ data_config = {
             '20240702',
             '20240709',
             '20240716',
-            '20240816', ## No assist 0 run
+            # '20240816', ## No assist 0 run
             '20240820',
             '20240827',
             '20240920',
@@ -127,6 +127,8 @@ data_config = {
             '20250114',
             '20250128', ## No assist 0 run
             '20250211', ## No assist 0 run
+            '20250218', ## No assist 0 run
+            '20250225', ## No assist 0 run
         ]
     }
 }
@@ -134,7 +136,13 @@ data_config = {
 
 
 processed_data_dir = '/home/ynffsy/Desktop/andersen_lab/data/neurogalaxy/processed'
-brainset_id = 'ALMG103CO_OT_AL0.35'
+# brainset_id = 'ALMG103CO_OT_AL0.35'
+# brainset_id = 'ALMG103CO_OT_noCAR'
+# brainset_id = 'ALMG103SSCO_OT_noCAR'
+# brainset_id = 'ALMG103CO_OT_OL'
+# brainset_id = 'ALMG103SSCO_OT_OL'
+# brainset_id = 'ALMG103SSCO_OT_A0'
+brainset_id = 'ALMG-100-SS_OT_CAR'
 output_dir = os.path.join(processed_data_dir, brainset_id)
 
 if not os.path.exists(output_dir):
